@@ -33,7 +33,7 @@ a small plugin that parses basic info like the donation amount from their receip
 The server itself is meant to be simple to host. It is entirely stateless, with no database or memory of
 past requests.
 
-### Demo
+## Demo
 
 Try out the demo. It will give you a sense of the proposed user flow.
 
