@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ProofOfDonation Demo</title>
+<script src="https://unpkg.com/vue@3.4.31/dist/vue.global.prod.js"></script>
+<style>
+  :root {
+    --accent: #1b8a5a;
+    --accent-dark: #146b46;
+    --accent-bg: #e8f6ef;
+    --ink: #1a1f1c;
+    --ink-soft: #5b6560;
+    --border: #e3e7e4;
+    --card-bg: #ffffff;
+    --page-bg: #f7f9f7;
+    --danger: #b3261e;
+    --danger-bg: #fbeceb;
+    --radius: 14px;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--page-bg);
+    color: var(--ink);
+    line-height: 1.5;
+  }
+
+  .page {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 32px 20px 64px;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 40px;
+  }
+
+  header h1 {
+    font-size: 1.75rem;
+    margin: 0 0 8px;
+    letter-spacing: -0.01em;
+  }
+
+  header p {
+    color: var(--ink-soft);
+    margin: 0;
+    font-size: 1.05rem;
+  }
+
+  .privacy-note {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 14px;
+    padding: 6px 14px;
+    background: var(--accent-bg);
+    color: var(--accent-dark);
+    border-radius: 999px;
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+
+  section {
+    margin-bottom: 40px;
+  }
+
+  .step-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .step-number {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: white;
+    font-weight: 700;
+    font-size: 0.9rem;
+    flex-shrink: 0;
+  }
+
+  .step-label h2 {
+    font-size: 1.15rem;
+    margin: 0;
+  }
+
+  .charities {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  @media (min-width: 620px) {
+    .charities { grid-template-columns: 1fr 1fr; }
+  }
+
+  .charity-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .charity-card h3 {
+    margin: 0;
+    font-size: 1.05rem;
+  }
+
+  .charity-card p {
+    margin: 0;
+    color: var(--ink-soft);
+    font-size: 0.92rem;
+    flex-grow: 1;
+  }
+
+  .currency-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .currency-badge {
+    background: var(--accent-bg);
+    color: var(--accent-dark);
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 999px;
+  }
+
+  .donate-link {
+    display: inline-block;
+    text-align: center;
+    background: var(--accent);
+    color: white;
+    text-decoration: none;
+    font-weight: 600;
+    padding: 10px 16px;
+    border-radius: 10px;
+    font-size: 0.92rem;
+    transition: background 0.15s ease;
+  }
+
+  .donate-link:hover { background: var(--accent-dark); }
+
+  .empty-state, .loading-state {
+    color: var(--ink-soft);
+    font-size: 0.95rem;
+    padding: 12px 0;
+  }
+
+  .card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+  }
+
+  .field {
+    margin-bottom: 18px;
+  }
+
+  .field:last-child { margin-bottom: 0; }
+
+  label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 6px;
+    font-size: 0.9rem;
+  }
+
+  .field-hint {
+    color: var(--ink-soft);
+    font-size: 0.8rem;
+    margin-top: 4px;
+  }
+
+  input[type="number"], input[type="text"] {
+    width: 100%;
+    padding: 11px 12px;
+    font-size: 1rem;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: #fcfdfc;
+  }
+
+  input[type="number"]:focus, input[type="text"]:focus, input[type="file"]:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+
+  .file-drop {
+    border: 2px dashed var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    text-align: center;
+    background: #fcfdfc;
+  }
+
+  .file-drop.has-file { border-color: var(--accent); background: var(--accent-bg); }
+
+  input[type="file"] { width: 100%; font-size: 0.9rem; }
+
+  .row {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+
+  @media (min-width: 620px) {
+    .row.two-col { grid-template-columns: 1fr 1fr; }
+  }
+
+  button.primary {
+    width: 100%;
+    padding: 14px;
+    font-size: 1.05rem;
+    font-weight: 700;
+    cursor: pointer;
+    border-radius: 10px;
+    border: none;
+    background: var(--accent);
+    color: white;
+    margin-top: 8px;
+    transition: background 0.15s ease;
+  }
+
+  button.primary:hover:not(:disabled) { background: var(--accent-dark); }
+  button.primary:disabled { opacity: 0.45; cursor: not-allowed; }
+
+  .result {
+    margin-top: 20px;
+    border-radius: var(--radius);
+    padding: 20px;
+    border: 1px solid var(--border);
+  }
+
+  .result.valid { background: var(--accent-bg); border-color: #b9e3cd; }
+  .result.invalid { background: var(--danger-bg); border-color: #f0c6c3; }
+
+  .result-heading {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 700;
+    font-size: 1.05rem;
+    margin-bottom: 12px;
+  }
+
+  .result.valid .result-heading { color: var(--accent-dark); }
+  .result.invalid .result-heading { color: var(--danger); }
+
+  .result-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    color: white;
+    font-size: 0.9rem;
+    flex-shrink: 0;
+  }
+
+  .result.valid .result-icon { background: var(--accent); }
+  .result.invalid .result-icon { background: var(--danger); }
+
+  .result-details {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 6px 16px;
+    font-size: 0.92rem;
+  }
+
+  .result-details dt { color: var(--ink-soft); }
+  .result-details dd { margin: 0; font-weight: 600; }
+
+  .result-reason {
+    margin-top: 4px;
+    font-size: 0.92rem;
+  }
+
+  details {
+    margin-top: 14px;
+  }
+
+  details summary {
+    cursor: pointer;
+    font-size: 0.85rem;
+    color: var(--ink-soft);
+  }
+
+  pre {
+    background: #fcfdfc;
+    border: 1px solid var(--border);
+    padding: 12px;
+    overflow-x: auto;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    margin-top: 8px;
+  }
+
+  footer {
+    text-align: center;
+    color: var(--ink-soft);
+    font-size: 0.82rem;
+    margin-top: 48px;
+  }
+
+  footer code {
+    background: var(--border);
+    padding: 1px 6px;
+    border-radius: 4px;
+  }
+</style>
+</head>
+<body>
+<div id="app" class="page">
+  <header>
+    <h1>ProofOfDonation</h1>
+    <p>Prove you donated to a real charity -- verified instantly from your email receipt.</p>
+    <div class="privacy-note">🔒 Runs entirely on your machine. Nothing you upload leaves it.</div>
+  </header>
+
+  <section>
+    <div class="step-label">
+      <span class="step-number">1</span>
+      <h2>Pick a charity and donate</h2>
+    </div>
+
+    <div v-if="charitiesLoading" class="loading-state">Loading supported charities...</div>
+    <div v-else-if="charities.length === 0" class="empty-state">No charities are configured on this server yet.</div>
+    <div v-else class="charities">
+      <div class="charity-card" v-for="c in charities" :key="c.charityName">
+        <h3>{{ c.charityName }}</h3>
+        <p>{{ c.description }}</p>
+        <div class="currency-badges">
+          <span class="currency-badge" v-for="cur in c.supportedCurrencies" :key="cur">{{ cur }}</span>
+        </div>
+        <a class="donate-link" :href="c.donateLink" target="_blank" rel="noopener noreferrer">Donate &rarr;</a>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="step-label">
+      <span class="step-number">2</span>
+      <h2>Verify your receipt</h2>
+    </div>
+
+    <div class="card">
+      <div class="field">
+        <label>Receipt (.eml file)</label>
+        <div class="file-drop" :class="{ 'has-file': file }">
+          <input type="file" @change="onFile" accept=".eml,message/rfc822" />
+        </div>
+        <div class="field-hint">In your mail client, look for "show original" or "download message" to get the raw .eml file.</div>
+      </div>
+
+      <div class="row two-col">
+        <div class="field">
+          <label>Minimum amount</label>
+          <input type="number" v-model.number="minAmount" min="0" step="0.01" />
+        </div>
+        <div class="field">
+          <label>Maximum age (hours)</label>
+          <input type="number" v-model.number="maxAgeHours" min="1" />
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Required currency (optional)</label>
+        <input type="text" v-model="currency" placeholder="Any currency, e.g. USD" />
+      </div>
+
+      <button class="primary" :disabled="!file || loading" @click="verify">
+        {{ loading ? 'Verifying...' : 'Verify receipt' }}
+      </button>
+    </div>
+
+    <div v-if="result" class="result" :class="result.valid ? 'valid' : 'invalid'">
+      <div class="result-heading">
+        <span class="result-icon">{{ result.valid ? '✓' : '✕' }}</span>
+        {{ result.valid ? 'Verified donation' : 'Could not verify' }}
+      </div>
+
+      <dl class="result-details" v-if="result.charity">
+        <dt>Charity</dt><dd>{{ result.charity }}</dd>
+        <dt v-if="result.amount != null">Amount</dt><dd v-if="result.amount != null">{{ result.amount }} {{ result.currency }}</dd>
+        <dt v-if="result.donatedAt">Donated</dt><dd v-if="result.donatedAt">{{ formatDate(result.donatedAt) }}</dd>
+      </dl>
+
+      <p class="result-reason" v-if="result.reason">{{ result.reason }}</p>
+
+      <details>
+        <summary>Show raw response</summary>
+        <pre>{{ JSON.stringify(result, null, 2) }}</pre>
+      </details>
+    </div>
+
+    <div v-if="error" class="result invalid">{{ error }}</div>
+  </section>
+
+  <footer>
+    This demo calls the same <code>verifyDonation()</code> logic as the real server. See the
+    project README for the full <code>POST /verify</code> API and self-hosting guide.
+  </footer>
+</div>
+
+<script>
+const { createApp, ref, onMounted } = Vue;
+
+createApp({
+  setup() {
+    const charities = ref([]);
+    const charitiesLoading = ref(true);
+
+    const file = ref(null);
+    const minAmount = ref(1);
+    const maxAgeHours = ref(8760);
+    const currency = ref('');
+    const result = ref(null);
+    const error = ref('');
+    const loading = ref(false);
+
+    onMounted(async () => {
+      try {
+        const res = await fetch('/api/charities');
+        const data = await res.json();
+        charities.value = data.charities ?? [];
+      } catch (err) {
+        console.error('Failed to load charities', err);
+      } finally {
+        charitiesLoading.value = false;
+      }
+    });
+
+    function onFile(e) {
+      file.value = e.target.files[0] ?? null;
+      result.value = null;
+      error.value = '';
+    }
+
+    function formatDate(iso) {
+      try {
+        return new Date(iso).toLocaleString();
+      } catch {
+        return iso;
+      }
+    }
+
+    async function verify() {
+      if (!file.value) return;
+      loading.value = true;
+      result.value = null;
+      error.value = '';
+      try {
+        const params = new URLSearchParams({
+          minAmount: String(minAmount.value),
+          maxAgeHours: String(maxAgeHours.value)
+        });
+        if (currency.value.trim()) params.set('currency', currency.value.trim());
+
+        const res = await fetch(`/api/verify?${params}`, {
+          method: 'POST',
+          body: file.value
+        });
+        result.value = await res.json();
+      } catch (err) {
+        error.value = 'Request failed: ' + err.message;
+      } finally {
+        loading.value = false;
+      }
+    }
+
+    return {
+      charities, charitiesLoading,
+      file, minAmount, maxAgeHours, currency, result, error, loading,
+      onFile, verify, formatDate
+    };
+  }
+}).mount('#app');
+</script>
+</body>
+</html>
