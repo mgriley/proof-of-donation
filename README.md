@@ -1,39 +1,21 @@
 # ProofOfDonation
 
-A small, self-hostable server that verifies charity donation receipt emails so a website
-(e.g. a forum signup form) can require "prove you donated at least $X to an approved
-charity in the last Y hours" as a bot/spam friction layer -- without a human reviewer.
+A CAPTCHA alternative: instead of solving a puzzle, users prove they donated to a real
+charity. Self-hosted, verifies a forwarded donation receipt email via DKIM — no charity or
+payment processor integration required.
 
-**What this is not:** a cryptographic guarantee of donor intent. It raises the cost of
-creating a fake account; it does not prevent a determined attacker who is willing to spend
-real money and effort. See [Trust model & known limitations](#trust-model--known-limitations).
+**Not a guarantee.** It raises the cost of creating a fake account; it won't stop a
+determined attacker willing to spend real money. See [Trust model & limitations](#trust-model--limitations).
 
 ## How it works
 
-1. A user uploads the raw `.eml` source of a donation receipt email (most mail clients have
-   a "show original" / "download message" option).
-2. The server verifies the email's **DKIM signature** -- this cryptographically proves the
-   message (headers and body, byte for byte) was sent unmodified by whichever mail server
-   holds the private key for the signing domain. It does not, by itself, prove the message
-   is a real receipt or says anything in particular.
-3. The DKIM signing domain is looked up against a table of installed **plugins**, each of
-   which declares which domain(s) it trusts and knows how to parse a specific charity's (or
-   donation platform's) receipt template.
-4. The matching plugin extracts the donation amount, currency, date, and donor email from
-   the verified message.
-5. The server checks the extracted donation against the caller's requirements (minimum
-   amount, maximum age, currency).
-6. The server returns a simple `{ valid, reason?, charity?, amount?, donorEmail?, receiptId?, ... }`
-   JSON response. It never returns the raw email content back to the caller.
+1. User uploads their donation receipt (`.eml` file).
+2. Server verifies the email's DKIM signature — proves it's genuine and unmodified.
+3. A plugin recognizes the sender and extracts the charity, amount, currency, date, and donor email.
+4. Server checks that against your requirements (min amount, max age, currency) and returns JSON.
 
-No cooperation from the charity or donation platform is required -- this works with any
-donation receipt sent to a normal inbox, which is what makes it buildable and self-hostable
-by anyone.
-
-This server is **stateless** -- it keeps no database and no memory of past requests. It
-answers "does this receipt satisfy these requirements, and who was it sent to," and nothing
-more. See [Statelessness & the integrator's responsibilities](#statelessness--the-integrators-responsibilities)
-for what that means for you as an integrator.
+Works with any charity that emails a receipt — no cooperation needed. Stateless: no
+database, no memory of past requests (see [Statelessness](#statelessness)).
 
 ## Quickstart
 
@@ -51,8 +33,8 @@ npm install
 npm run dev
 ```
 
-Run the test suite (uses synthetic, offline-signed test emails and mock DNS -- no real
-network access or real charity data required):
+Run the tests (synthetic, offline-signed emails and mock DNS — no real network access or
+charity data needed):
 
 ```bash
 npm test
@@ -60,42 +42,34 @@ npm test
 
 ### Docker
 
-A prebuilt image (linux/amd64 and linux/arm64) is published to GitHub Container Registry
-from every push to `master` -- no build step needed:
-
 ```bash
 docker run -p 8787:8787 ghcr.io/mgriley/proof-of-donation:latest
 ```
 
-Or build it yourself from source:
+Or build from source:
 
 ```bash
 docker build -t proof-of-donation .
 docker run -p 8787:8787 proof-of-donation
 ```
 
-No volume needed -- the server keeps no state of its own. Note `:latest` is a rolling tag
-tracking `master`, not a stable release -- there's no versioned tag yet (see
-`.github/workflows/docker-publish.yml`).
+`:latest` tracks `master` (no versioned releases yet). No volume needed — stateless.
 
-### Try it locally (demo)
+### Demo
 
 ```bash
 npm install
 npm run demo
 ```
 
-Then open the printed URL. It's a tiny page (plain Vue, no build step) for uploading a real
-`.eml` receipt and seeing the raw `/verify`-shaped JSON result -- useful for seeing what this
-actually does before wiring up an integration. It runs the same verification logic
-in-process; nothing you upload is sent anywhere else (see `demo/server.ts`).
+Opens a small local page to upload a receipt and see the real verification result — nothing
+leaves your machine.
 
 ## API
 
 ### `POST /verify`
 
-Request body: the raw `.eml` message bytes (any `Content-Type` is accepted as opaque
-bytes). Query parameters:
+Request body: the raw `.eml` message bytes. Query parameters:
 
 | Param         | Required | Description                                                              |
 | ------------- | -------- | ------------------------------------------------------------------------- |
@@ -103,14 +77,11 @@ bytes). Query parameters:
 | `maxAgeHours` | yes      | How recent the donation must be, in hours.                                |
 | `currency`    | no       | Required ISO 4217 currency code (e.g. `USD`). If omitted, any currency the plugin reports is accepted. |
 
-Note there's no `claimedEmail` param -- this server doesn't do identity binding for you.
-It reports whichever email the receipt was actually sent to (`donorEmail`); you compare
-that against your own already-verified account email. See
-[Statelessness & the integrator's responsibilities](#statelessness--the-integrators-responsibilities).
+No `claimedEmail` param — the server doesn't bind identity for you. It reports `donorEmail`;
+compare it yourself. See [Statelessness](#statelessness).
 
-Response (always HTTP 200 for a well-formed request, even when the donation doesn't
-qualify -- check the `valid` field). Fields other than `valid`/`reason` are present
-whenever a receipt was successfully parsed, whether or not it met your requirements:
+Always HTTP 200 — check `valid`. Other fields are present whenever a receipt was parsed,
+pass or fail:
 
 ```json
 {
@@ -128,7 +99,7 @@ whenever a receipt was successfully parsed, whether or not it met your requireme
 ```json
 {
   "valid": false,
-  "reason": "donation amount 5 USD is below the required minimum of 10",
+  "reason": "This donation (5 USD) is below the required minimum of 10 USD.",
   "pluginId": "salvation-army",
   "charity": "The Salvation Army",
   "amount": 5,
@@ -139,8 +110,6 @@ whenever a receipt was successfully parsed, whether or not it met your requireme
 }
 ```
 
-Example:
-
 ```bash
 curl -X POST "http://localhost:8787/verify?minAmount=5&maxAgeHours=48" \
   --data-binary @receipt.eml
@@ -148,14 +117,12 @@ curl -X POST "http://localhost:8787/verify?minAmount=5&maxAgeHours=48" \
 
 ### `GET /plugins`
 
-Lists the plugins enabled on this instance, so an integrator can see what it can verify
-before wiring anything up: `{ "plugins": [{ "id", "name", "trustedDkimDomains" }] }`.
+What this instance can verify: `{ "plugins": [{ "id", "name", "trustedDkimDomains" }] }`.
 
 ### `GET /charities`
 
-For showing an end user "here's who you can donate to" *before* they've made a donation --
-e.g. a donation picker on a signup page. Returns each supported charity's static display
-info: `{ "charities": [{ "charityName", "description", "supportedCurrencies", "donateLink" }] }`.
+Charities to show a donor before they've donated (e.g. a donation picker):
+`{ "charities": [{ "charityName", "description", "supportedCurrencies", "donateLink" }] }`.
 
 ```bash
 curl http://localhost:8787/charities
@@ -178,23 +145,18 @@ curl http://localhost:8787/charities
 
 Liveness check: `{ "ok": true }`.
 
-## Supported charities / plugins
+## Supported charities
 
-- **`salvation-army`** -- The Salvation Army, via GoFundMe Charity's donation platform.
+- **`salvation-army`** — The Salvation Army, via GoFundMe Charity.
 
-That's it for now -- adding more is the natural next step (see below). Each one takes real
-receipt samples to build correctly; guessing at an unverified template is worse than not
-having the plugin at all.
+More coming — each one needs a real receipt sample to build correctly (see
+[Adding a plugin](#adding-a-plugin)).
 
 ## Plugin architecture
 
-Trust in this system is **not** "does the DKIM signature pass" alone -- plenty of domains
-can produce a passing signature for content that has nothing to do with a real donation.
-Trust is "does a passing signature, from a domain an operator has explicitly configured,
-parse into a receipt matching a specific charity's real template." Each plugin owns that
-second half.
-
-Every plugin implements the same small interface:
+A plugin declares which DKIM domain(s) it trusts and how to read a receipt from a message
+signed by one of them. `parse()` only ever runs on a message that already passed DKIM
+verification.
 
 ```ts
 interface ReceiptPlugin {
@@ -205,21 +167,13 @@ interface ReceiptPlugin {
 }
 ```
 
-`parse()` is only ever called on a message whose DKIM signature already verified against one
-of `trustedDkimDomains` -- plugins never see unverified content.
+Two ways to get one:
 
-You never write this interface by hand, though. There are two ways to get one:
-
-- **A RegexPlugin** (`src/plugins/regex-plugin.ts`) -- a plain JSON file describing a
-  trusted domain/address and a few regexes. This is the default, recommended path: no code,
-  no npm install, no trusting arbitrary logic. A malformed or even maliciously-written
-  RegexPlugin file can at worst produce a wrong verification result -- it cannot execute
-  code, touch the filesystem, or make network calls, because it isn't code. Adding a charity
-  means writing a JSON file, not writing a plugin.
-- **A hand-written `ReceiptPlugin`** in a `.js` file -- the advanced escape hatch for a
-  template a RegexPlugin genuinely can't express (e.g. the amount only appears in a PDF
-  attachment, not the body). This runs as trusted code with full Node.js access, the same
-  as any other server-side dependency -- only point this at code you trust.
+- **RegexPlugin** (default) — a JSON file with a trusted domain/address and a few regexes.
+  No code, no npm install. At worst produces a wrong result — it can't execute code, touch
+  disk, or make network calls.
+- **Code plugin** (`.js`, advanced) — for a template a regex can't express (e.g. amount only
+  in a PDF). Runs as trusted code with full Node.js access.
 
 ### RegexPlugin schema
 
@@ -245,116 +199,75 @@ You never write this interface by hand, though. There are two ways to get one:
 | `id`                  | yes      | Unique, stable, lowercase-with-hyphens.                                      |
 | `name`                | yes      | Human-readable name for logs/docs.                                           |
 | `charityName`         | yes      | Reported in a successful result, and shown via `GET /charities`.            |
-| `description`         | yes      | Brief, plain-language description of what the charity does. Shown via `GET /charities`. |
-| `supportedCurrencies` | yes      | Array of ISO 4217 codes this charity's donation page accepts. Display-only -- see below. |
-| `donateLink`          | yes      | `https://` URL where a user can go make a donation. Shown via `GET /charities`. |
-| `currency`            | yes      | ISO 4217 code this template's `amountPattern` is written to extract, e.g. `"USD"`. A parsing detail, not the same thing as `supportedCurrencies`. |
+| `description`         | yes      | What the charity does, shown via `GET /charities`.                          |
+| `supportedCurrencies` | yes      | Currencies this charity accepts (display-only — see note below).            |
+| `donateLink`          | yes      | `https://` URL where a user can go make a donation.                         |
+| `currency`            | yes      | Currency this template's regex extracts (parsing detail — see note below).  |
 | `trustedDkimDomains`  | yes      | Array of DKIM `d=` domains this plugin trusts.                               |
-| `trustedFromAddress`  | no       | Exact `From:` address required. See below -- needed for shared platforms.    |
+| `trustedFromAddress`  | no       | Exact `From:` address required. See below — needed for shared platforms.    |
 | `subjectPattern`      | yes      | Regex tested against the subject (case-insensitive). No capture group needed.|
 | `amountPattern`       | yes      | Regex with one capture group: the donation amount, e.g. `"12.34"`.           |
 | `datePattern`         | yes      | Regex with one capture group: a `Date`-parseable date string.                |
 
-`currency` and `supportedCurrencies` are deliberately separate: `currency` is what this
-specific regex template is written to extract from a receipt's body (a parsing detail,
-always exactly one), while `supportedCurrencies` is informational metadata about what the
-charity's donation page accepts overall (for a donation-picker UI) -- they may not always
-match, e.g. if a charity accepts multiple currencies but this particular receipt template
-only ever reports one of them.
+`currency` is a parsing detail (what this template extracts); `supportedCurrencies` is
+display metadata (what the charity accepts overall). They can differ.
 
-A plugin **file** is a JSON array of these objects -- one file can hold any number of
-plugins, including a single one. A bad entry (invalid regex, missing field, malformed id)
-fails loudly at startup with the file path and field name, rather than silently matching
-nothing or, worse, matching too much.
+A plugin file is a JSON array of these objects — one or many per file. A bad entry fails
+loudly at startup, naming the file and field.
 
-### A subtlety: shared donation platforms
+### Shared donation platforms
 
-Many charities (Salvation Army included) don't send receipts from their own domain -- they
-use a shared platform like GoFundMe Charity, PayPal Giving Fund, Classy, or Stripe. A
-passing DKIM signature from `prosend.gofundme.com` only proves "some charity/campaign on
-GoFundMe Charity sent this," not which one. For these, set `trustedFromAddress` to the exact
-address the platform assigns per-charity account -- that address can't be forged without
-invalidating the signature (confirm `From` is actually in the signature's `h=` list before
-relying on this). Omit `trustedFromAddress` only when the domain itself is charity-specific
-and sufficient on its own. See `plugins/salvation-army.json` for a worked example.
+Many charities send receipts via a shared platform (GoFundMe Charity, PayPal Giving Fund,
+Classy, Stripe), not their own domain — a passing signature only proves *some* campaign on
+that platform sent it. Set `trustedFromAddress` to the exact per-charity address to narrow
+it down (confirm `From` is in the signature's `h=` list first). Omit it only when the domain
+itself is charity-specific. See `plugins/salvation-army.json` for a worked example.
 
 ### Adding a plugin
 
-1. Get 1-2 real sample receipts (`.eml`, with full headers -- "show original" in Gmail, or
-   equivalent). Never commit real samples to source control; they contain personal data
-   (see `example_receipts/` in `.gitignore`).
-2. Confirm the DKIM signing domain (`d=` tag) and which headers are signed (`h=` tag) --
-   this tells you whether you can trust `From`, `Subject`, etc.
-3. Write a JSON file matching the schema above and drop it in `plugins/` (bundled with the
-   server), or in a directory you list in `PLUGIN_DIRS` (comma-separated paths; see
-   `.env.example`) -- either way it's picked up automatically at startup, no code changes
-   needed.
-4. Write a unit test against the real template's structure with fake donor data swapped in
-   (see `src/plugins/regex-plugin.test.ts`'s bundled-file test for the pattern to follow).
+1. Get 1-2 real sample receipts (`.eml`, full headers). Never commit real samples — they
+   contain personal data (see `example_receipts/` in `.gitignore`).
+2. Check the DKIM `d=` domain and `h=` signed headers to see what you can trust.
+3. Write a JSON file matching the schema above in `plugins/`, or a directory listed in
+   `PLUGIN_DIRS` (see `.env.example`) — picked up automatically, no code changes.
+4. Add a test with fake donor data against the real template's shape (see
+   `src/plugins/regex-plugin.test.ts`).
 
-If the template genuinely can't be expressed as regexes against the subject/body (rare --
-e.g. the amount is only in a PDF attachment), implement `ReceiptPlugin` directly instead as
-a `.js` file in a `PLUGIN_DIRS` directory. Every directory listed in `PLUGIN_DIRS` (plus the
-bundled `plugins/` directory, included by default) is scanned recursively the same way:
-`.json` files load as RegexPlugins, `.js` files load as code-based plugins (default, or
-named `plugin`, export).
+For a template that can't be expressed as regexes, implement `ReceiptPlugin` directly as a
+`.js` file instead — `PLUGIN_DIRS` loads both kinds recursively, the same way.
 
-Set `DISABLE_BUNDLED_PLUGINS=true` to skip the bundled `plugins/` directory entirely and use
-only `PLUGIN_DIRS` -- useful for running with a fully custom charity list instead of the
-defaults (see `.env.example`).
+`DISABLE_BUNDLED_PLUGINS=true` skips the bundled `plugins/` directory, for a fully custom
+charity list.
 
-## Statelessness & the integrator's responsibilities
+## Statelessness
 
-This server verifies and extracts facts from a receipt; it does not decide who those facts
-belong to or whether they've been used before. That's deliberate, not an oversight -- an
-earlier design had this server enforce identity matching and replay protection itself, and
-it had a real bug: if the integrator's own signup write failed *after* a successful
-`/verify` call (a crashed request, a bug, a timeout), the donor's receipt was already marked
-"used" here, permanently, with no way to retry -- through no fault of their own.
+The server keeps no database — it doesn't bind identity or prevent replay itself. `/verify`
+returns two fields for you to use instead:
 
-Instead, `/verify` returns two things for the integrator to act on:
+- **`donorEmail`** — the email the receipt was sent to. Compare it against the account being created.
+- **`receiptId`** — a stable id for this receipt. Store it alongside the new account, in the
+  same database transaction, and reject if already used.
 
-- **`donorEmail`** -- the email address the receipt was actually sent to. Compare it
-  (case-insensitively) against the email address on the account already being created --
-  this is the identity check, and it belongs on your side because you're the one who knows
-  which account it needs to match.
-- **`receiptId`** -- a stable id derived from the receipt's DKIM signature. Store it
-  alongside the new account, **in the same database write/transaction** that creates the
-  account, and check for it before creating one. That's what actually prevents one receipt
-  from validating more than one signup: the check and the effect it's protecting happen
-  atomically, in your database, instead of being two separate steps across a network call
-  that can fail independently.
+Do both, in your own database — otherwise the same receipt can validate unlimited signups.
 
-This also means: if you don't store `receiptId` yourself, there is no replay protection at
-all, and the same receipt can validate unlimited signups. That's the real cost of statelessness
-here -- it's not a default you get for free anymore, it's a step you have to actually do.
+## Trust model & limitations
 
-## Trust model & known limitations
-
-- **This is a friction layer, not a guarantee.** DKIM proves an email is unmodified and
-  came from the claimed domain; it says nothing about donor intent. Someone willing to spend
-  real money and effort could donate a small amount to themselves through a real charity
-  channel to farm a valid receipt. Combine this with other signals (rate limiting, review)
-  for anything higher-stakes than raising bot cost.
-- **Refunds/chargebacks aren't tracked.** A receipt that was valid at donation time stays
-  valid even if the donor is refunded minutes later. Out of scope for tonight.
-- **No currency conversion.** If you require `USD` and a receipt is in `CAD`, it's rejected
-  outright rather than converted.
-- **DKIM key rotation** could in principle make an old, previously-valid signature fail
-  verification later. In practice this only matters for receipts far outside a normal
-  freshness window (`maxAgeHours`), since keys don't rotate on the timescale of hours.
-- **Plugins are trusted code.** Only enable/install plugins you trust; a malicious plugin
-  has full Node.js access, same as any other server-side dependency.
-- **No identity binding or replay protection happens here.** By design -- see
-  [Statelessness & the integrator's responsibilities](#statelessness--the-integrators-responsibilities).
-  If you don't implement both on your side, the same receipt can create unlimited accounts.
+- **Friction, not proof.** DKIM proves the email is unmodified and from the claimed domain
+  — not donor intent. Someone could donate to themselves to farm a valid receipt.
+- **No refund/chargeback tracking.** A receipt valid at donation time stays valid even if
+  later refunded.
+- **No currency conversion.** A `CAD` receipt is rejected outright if you require `USD`.
+- **DKIM signatures can expire or become unverifiable.** Some platforms set a short explicit
+  expiry (as little as ~2 hours); DNS key rotation can also break old signatures. Verify
+  soon after donating.
+- **Plugins are trusted code.** Only install ones you trust; a malicious plugin has full
+  Node.js access.
+- **No identity or replay protection here, by design** — see [Statelessness](#statelessness).
 
 ## Configuration
 
-See `.env.example`. All configuration is via environment variables (loadable with Node's
-built-in `--env-file` flag, no extra dependency needed).
+See `.env.example`. Configured via environment variables (Node's built-in `--env-file` works).
 
 ## Requirements
 
-Node.js >= 20.18.1 (the floor set by the `mailauth` dependency). No database, no native
-modules to compile -- the server itself has no storage requirements at all.
+Node.js >= 20.18.1. No database, no native modules to compile.

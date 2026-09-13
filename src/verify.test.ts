@@ -9,12 +9,12 @@ import { verifyDonation } from './verify.js';
 // These tests exercise verifyDonation()'s generic business-rule logic (amount/age/currency
 // checks, domain trust) using a throwaway fake plugin and a fake DKIM domain -- deliberately
 // decoupled from any real charity/platform so they don't need updating whenever a real
-// plugin's regex or trust config changes. See src/plugins/builtin/salvation-army.test.ts
-// for template-specific parsing tests.
+// plugin's regex or trust config changes. See src/plugins/regex-plugin.test.ts for
+// template-specific parsing tests.
 //
 // Note: this server is stateless and does not do identity binding or replay protection --
 // it returns donorEmail and receiptId so the integrator can do both against their own
-// database. See README "Statelessness & the integrator's responsibilities".
+// database. See README "Statelessness".
 
 const SELECTOR = 'test';
 const DOMAIN = 'test-charity.example';
