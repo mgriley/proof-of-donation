@@ -9,7 +9,7 @@ import type { RegexPluginDescriptor } from './regex-plugin.js';
 export interface PluginLoadOptions {
   /**
    * Directories to load plugins from, in addition to the bundled plugins/ directory (unless
-   * excludeBuiltins is set). Each directory is scanned recursively (including any
+   * includeBuiltins is false). Each directory is scanned recursively (including any
    * subdirectories):
    *  - every `.json` file is parsed as a JSON array of RegexPluginDescriptor objects (see
    *    regex-plugin.ts) -- the default, recommended way to add a plugin.
@@ -20,11 +20,11 @@ export interface PluginLoadOptions {
    */
   pluginDirs?: string[];
   /**
-   * If true, skip the bundled plugins/ directory entirely -- only pluginDirs are loaded.
-   * Default: false (the bundled directory is always included). Useful for a fully custom
+   * If false, skip the bundled plugins/ directory entirely -- only pluginDirs are loaded.
+   * Default: true (the bundled directory is included). Set to false for a fully custom
    * charity list, or for tests that want an isolated, deterministic plugin set.
    */
-  excludeBuiltins?: boolean;
+  includeBuiltins?: boolean;
 }
 
 // plugins/ sits at the repo root, alongside src/ and dist/ -- this resolves to it regardless
@@ -117,8 +117,9 @@ async function loadPluginDir(dir: string, required: boolean): Promise<ReceiptPlu
 }
 
 export async function loadPlugins(opts: PluginLoadOptions = {}): Promise<ReceiptPlugin[]> {
+  const includeBuiltins = opts.includeBuiltins ?? true;
   const dirs = [
-    ...(opts.excludeBuiltins ? [] : [{ dir: BUNDLED_PLUGINS_DIR, required: false }]),
+    ...(includeBuiltins ? [{ dir: BUNDLED_PLUGINS_DIR, required: false }] : []),
     ...(opts.pluginDirs ?? []).map((dir) => ({ dir, required: true }))
   ];
 

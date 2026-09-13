@@ -28,11 +28,11 @@ test('always includes the bundled plugins/salvation-army.json plugin, even with 
   assert.ok(plugins.some((p) => p.id === 'salvation-army'));
 });
 
-test('excludeBuiltins skips the bundled directory entirely, using only pluginDirs', async () => {
+test('includeBuiltins: false skips the bundled directory entirely, using only pluginDirs', async () => {
   const dir = tempPluginDir();
   try {
     writeFileSync(path.join(dir, 'charity.json'), JSON.stringify([VALID_DESCRIPTOR]));
-    const plugins = await loadPlugins({ pluginDirs: [dir], excludeBuiltins: true });
+    const plugins = await loadPlugins({ pluginDirs: [dir], includeBuiltins: false });
     assert.deepEqual(
       plugins.map((p) => p.id),
       ['from-json']
@@ -42,8 +42,8 @@ test('excludeBuiltins skips the bundled directory entirely, using only pluginDir
   }
 });
 
-test('excludeBuiltins with no pluginDirs loads no plugins at all', async () => {
-  const plugins = await loadPlugins({ excludeBuiltins: true });
+test('includeBuiltins: false with no pluginDirs loads no plugins at all', async () => {
+  const plugins = await loadPlugins({ includeBuiltins: false });
   assert.deepEqual(plugins, []);
 });
 
@@ -134,7 +134,7 @@ test('ignores files with unrelated extensions in a plugin directory', async () =
   try {
     writeFileSync(path.join(dir, 'README.md'), '# not a plugin');
     writeFileSync(path.join(dir, 'charity.json'), JSON.stringify([VALID_DESCRIPTOR]));
-    const plugins = await loadPlugins({ pluginDirs: [dir], excludeBuiltins: true });
+    const plugins = await loadPlugins({ pluginDirs: [dir], includeBuiltins: false });
     assert.deepEqual(
       plugins.map((p) => p.id),
       ['from-json']
