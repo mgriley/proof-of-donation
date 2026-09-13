@@ -1,4 +1,4 @@
-# Proof of Donation 💝
+# Proof of Donation 🎗️
 
 Is your website overrun by bots, grifters, rogue agents, and other assorted scum-of-the-earth?
 
