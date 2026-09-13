@@ -18,7 +18,7 @@ out in the wild, happy to help with setup :)
 2. You modify your sign-up page to have the user upload a donation receipt (`.eml` file), instead of
 solving a CAPTCHA.
 3. Send `POST /verify` to the server from your backend. It will verify the receipt and return pass/no-pass.
-4. If they pass, continue with account creation :)
+4. If they pass, continue with account creation.
 
 How does it verify a receipt? Most modern email senders cryptographically sign emails sent by them (using a
 security standard called DKIM). We use this signature to verify that the email is in fact from the
