@@ -154,6 +154,10 @@ What this instance can verify: `{ "plugins": [{ "id", "name", "trustedDkimDomain
 
 Liveness check: `{ "ok": true }`.
 
+## Configuration
+
+See `.env.example`. Configured via environment variables (Node's built-in `--env-file` works).
+
 ## Supported charities
 
 - **`salvation-army`** — The Salvation Army, via GoFundMe Charity.
@@ -280,10 +284,6 @@ difference for some websites and forums.
 - **Plugins are trusted code.** Only install ones you trust; a malicious plugin has full
   Node.js access.
 - **No identity or replay protection here, by design** — see [Integration Guide](#integration-guide).
-
-## Configuration
-
-See `.env.example`. Configured via environment variables (Node's built-in `--env-file` works).
 
 ## Requirements
 
