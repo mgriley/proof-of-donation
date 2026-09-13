@@ -265,7 +265,7 @@ website's server is responsible for:
   matters to you, save `receiptId` alongside the account you create, and reject any signup
   that reuses one you've already seen.
 
-## Trust model & limitations
+## Limitations
 
 Similar to CAPTCHA, proof-of-donation cannot reasonably stop a determined attacker. It can, however,
 increase the cost of creating hundreds or thousands of low-effort bot accounts. This can make a substantial
