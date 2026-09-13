@@ -5,10 +5,7 @@ import { createServer } from './server.js';
 async function main() {
   const config = loadConfig();
 
-  const plugins = await loadPlugins({
-    enabledBuiltins: config.enabledBuiltins,
-    externalModules: config.externalModules
-  });
+  const plugins = await loadPlugins({ pluginDirs: config.pluginDirs });
 
   if (plugins.length === 0) {
     console.warn('Warning: no receipt plugins are enabled -- every /verify request will fail.');

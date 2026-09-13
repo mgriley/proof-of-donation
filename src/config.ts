@@ -1,8 +1,7 @@
 export interface Config {
   port: number;
-  /** undefined = all builtin plugins enabled */
-  enabledBuiltins?: string[];
-  externalModules: string[];
+  /** Extra directories to load plugins from, in addition to the bundled plugins/ directory. */
+  pluginDirs: string[];
 }
 
 function splitList(value: string | undefined): string[] | undefined {
@@ -17,7 +16,6 @@ function splitList(value: string | undefined): string[] | undefined {
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   return {
     port: Number.parseInt(env.PORT ?? '8787', 10),
-    enabledBuiltins: splitList(env.ENABLED_PLUGINS),
-    externalModules: splitList(env.EXTERNAL_PLUGINS) ?? []
+    pluginDirs: splitList(env.PLUGIN_DIRS) ?? []
   };
 }

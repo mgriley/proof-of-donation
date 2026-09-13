@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 import type { DKIMVerifyOptions } from 'mailauth';
-import type { ReceiptPlugin } from './types.js';
+import type { ReceiptPlugin } from './plugins/plugin.js';
 import { verifyEmail } from './email.js';
 
 export interface VerifyRequest {

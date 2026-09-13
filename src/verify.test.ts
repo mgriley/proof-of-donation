@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import { dkimSign } from 'mailauth';
 import type { DNSResolver } from 'mailauth';
-import type { ReceiptPlugin } from './types.js';
+import type { ReceiptPlugin } from './plugins/plugin.js';
 import { verifyDonation } from './verify.js';
 
 // These tests exercise verifyDonation()'s generic business-rule logic (amount/age/currency

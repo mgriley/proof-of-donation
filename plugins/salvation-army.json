@@ -1,0 +1,13 @@
+[
+  {
+    "id": "salvation-army",
+    "name": "The Salvation Army (via GoFundMe Charity)",
+    "charityName": "The Salvation Army",
+    "currency": "USD",
+    "trustedDkimDomains": ["prosend.gofundme.com"],
+    "trustedFromAddress": "info@the-salvation-army-national-corp.prosend.gofundme.com",
+    "subjectPattern": "thank you|donation|receipt",
+    "amountPattern": "donation amount\\s*\\$?\\s*([\\d,]+\\.\\d{2})",
+    "datePattern": "donation date\\s*([A-Za-z]{3,9}\\.?\\s+\\d{1,2},?\\s+\\d{4})"
+  }
+]

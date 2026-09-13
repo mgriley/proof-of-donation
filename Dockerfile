@@ -12,5 +12,6 @@ ENV PORT=8787
 COPY package*.json ./
 RUN npm install --omit=dev
 COPY --from=build /app/dist ./dist
+COPY plugins ./plugins
 EXPOSE 8787
 CMD ["node", "dist/index.js"]

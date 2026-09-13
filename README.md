@@ -148,7 +148,7 @@ Trust is "does a passing signature, from a domain an operator has explicitly con
 parse into a receipt matching a specific charity's real template." Each plugin owns that
 second half.
 
-A plugin is any object implementing:
+Every plugin implements the same small interface:
 
 ```ts
 interface ReceiptPlugin {
@@ -162,17 +162,62 @@ interface ReceiptPlugin {
 `parse()` is only ever called on a message whose DKIM signature already verified against one
 of `trustedDkimDomains` -- plugins never see unverified content.
 
+You never write this interface by hand, though. There are two ways to get one:
+
+- **A RegexPlugin** (`src/plugins/regex-plugin.ts`) -- a plain JSON file describing a
+  trusted domain/address and a few regexes. This is the default, recommended path: no code,
+  no npm install, no trusting arbitrary logic. A malformed or even maliciously-written
+  RegexPlugin file can at worst produce a wrong verification result -- it cannot execute
+  code, touch the filesystem, or make network calls, because it isn't code. Adding a charity
+  means writing a JSON file, not writing a plugin.
+- **A hand-written `ReceiptPlugin`** in a `.js` file -- the advanced escape hatch for a
+  template a RegexPlugin genuinely can't express (e.g. the amount only appears in a PDF
+  attachment, not the body). This runs as trusted code with full Node.js access, the same
+  as any other server-side dependency -- only point this at code you trust.
+
+### RegexPlugin schema
+
+```json
+{
+  "id": "salvation-army",
+  "name": "The Salvation Army (via GoFundMe Charity)",
+  "charityName": "The Salvation Army",
+  "currency": "USD",
+  "trustedDkimDomains": ["prosend.gofundme.com"],
+  "trustedFromAddress": "info@the-salvation-army-national-corp.prosend.gofundme.com",
+  "subjectPattern": "thank you|donation|receipt",
+  "amountPattern": "donation amount\\s*\\$?\\s*([\\d,]+\\.\\d{2})",
+  "datePattern": "donation date\\s*([A-Za-z]{3,9}\\.?\\s+\\d{1,2},?\\s+\\d{4})"
+}
+```
+
+| Field                | Required | Description                                                                 |
+| --------------------- | -------- | ---------------------------------------------------------------------------- |
+| `id`                  | yes      | Unique, stable, lowercase-with-hyphens.                                      |
+| `name`                | yes      | Human-readable name for logs/docs.                                           |
+| `charityName`         | yes      | Reported as-is in a successful result.                                       |
+| `currency`            | yes      | ISO 4217 code, e.g. `"USD"`. This template is assumed to always use one currency. |
+| `trustedDkimDomains`  | yes      | Array of DKIM `d=` domains this plugin trusts.                               |
+| `trustedFromAddress`  | no       | Exact `From:` address required. See below -- needed for shared platforms.    |
+| `subjectPattern`      | yes      | Regex tested against the subject (case-insensitive). No capture group needed.|
+| `amountPattern`       | yes      | Regex with one capture group: the donation amount, e.g. `"12.34"`.           |
+| `datePattern`         | yes      | Regex with one capture group: a `Date`-parseable date string.                |
+
+A plugin **file** is a JSON array of these objects -- one file can hold any number of
+plugins, including a single one. A bad entry (invalid regex, missing field, malformed id)
+fails loudly at startup with the file path and field name, rather than silently matching
+nothing or, worse, matching too much.
+
 ### A subtlety: shared donation platforms
 
 Many charities (Salvation Army included) don't send receipts from their own domain -- they
 use a shared platform like GoFundMe Charity, PayPal Giving Fund, Classy, or Stripe. A
 passing DKIM signature from `prosend.gofundme.com` only proves "some charity/campaign on
-GoFundMe Charity sent this," not which one. For these, the plugin must additionally check a
-field that's both charity-specific and covered by the DKIM signature -- typically the exact
-`From:` address, which platforms assign per-charity account and which can't be forged
-without invalidating the signature (verify the header is actually in the signature's `h=`
-list before relying on this). See `src/plugins/builtin/salvation-army.ts` for a worked
-example, including the comment on how that address was confirmed to be signed.
+GoFundMe Charity sent this," not which one. For these, set `trustedFromAddress` to the exact
+address the platform assigns per-charity account -- that address can't be forged without
+invalidating the signature (confirm `From` is actually in the signature's `h=` list before
+relying on this). Omit `trustedFromAddress` only when the domain itself is charity-specific
+and sufficient on its own. See `plugins/salvation-army.json` for a worked example.
 
 ### Adding a plugin
 
@@ -181,13 +226,18 @@ example, including the comment on how that address was confirmed to be signed.
    (see `example_receipts/` in `.gitignore`).
 2. Confirm the DKIM signing domain (`d=` tag) and which headers are signed (`h=` tag) --
    this tells you whether you can trust `From`, `Subject`, etc.
-3. Write a small module implementing `ReceiptPlugin` (`src/plugins/builtin/util.ts` has
-   `bodyText()`, `stripHtml()`, `parseAmount()`, `firstEmailAddress()` helpers).
-4. Add it to `src/plugins/builtin/index.ts`, or ship it as a standalone module and point
-   `EXTERNAL_PLUGINS` at it (comma-separated paths/specifiers; see `.env.example`) --
-   external plugins run as trusted code with full Node.js access, same as any dependency.
-5. Write a unit test against the real template's structure with fake donor data swapped in
-   (see `src/plugins/builtin/salvation-army.test.ts`).
+3. Write a JSON file matching the schema above and drop it in `plugins/` (bundled with the
+   server), or in a directory you list in `PLUGIN_DIRS` (comma-separated paths; see
+   `.env.example`) -- either way it's picked up automatically at startup, no code changes
+   needed.
+4. Write a unit test against the real template's structure with fake donor data swapped in
+   (see `src/plugins/regex-plugin.test.ts`'s bundled-file test for the pattern to follow).
+
+If the template genuinely can't be expressed as regexes against the subject/body (rare --
+e.g. the amount is only in a PDF attachment), implement `ReceiptPlugin` directly instead as
+a `.js` file in a `PLUGIN_DIRS` directory. Every directory listed in `PLUGIN_DIRS` (plus the
+bundled `plugins/` directory, always included) is scanned the same way: `.json` files load
+as RegexPlugins, `.js` files load as code-based plugins (default, or named `plugin`, export).
 
 ## Statelessness & the integrator's responsibilities
 

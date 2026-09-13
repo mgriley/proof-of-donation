@@ -1,5 +1,5 @@
 import express, { Request, Response } from 'express';
-import type { ReceiptPlugin } from './types.js';
+import type { ReceiptPlugin } from './plugins/plugin.js';
 import { verifyDonation } from './verify.js';
 
 function firstQueryString(value: unknown): string | undefined {

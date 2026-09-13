@@ -2,7 +2,7 @@ import { dkimVerify } from 'mailauth';
 import type { DKIMVerifyOptions } from 'mailauth';
 import PostalMime from 'postal-mime';
 import type { Address } from 'postal-mime';
-import type { EmailAddress } from './types.js';
+import type { EmailAddress } from './plugins/plugin.js';
 
 export interface EmailAuthResult {
   /** Unique, lowercased DKIM `d=` domains that had a passing signature. */
