@@ -67,6 +67,18 @@ docker run -p 8787:8787 proof-of-donation
 
 No volume needed -- the server keeps no state of its own.
 
+### Try it locally (demo)
+
+```bash
+npm install
+npm run demo
+```
+
+Then open the printed URL. It's a tiny page (plain Vue, no build step) for uploading a real
+`.eml` receipt and seeing the raw `/verify`-shaped JSON result -- useful for seeing what this
+actually does before wiring up an integration. It runs the same verification logic
+in-process; nothing you upload is sent anywhere else (see `demo/server.ts`).
+
 ## API
 
 ### `POST /verify`
@@ -128,6 +140,29 @@ curl -X POST "http://localhost:8787/verify?minAmount=5&maxAgeHours=48" \
 Lists the plugins enabled on this instance, so an integrator can see what it can verify
 before wiring anything up: `{ "plugins": [{ "id", "name", "trustedDkimDomains" }] }`.
 
+### `GET /charities`
+
+For showing an end user "here's who you can donate to" *before* they've made a donation --
+e.g. a donation picker on a signup page. Returns each supported charity's static display
+info: `{ "charities": [{ "charityName", "description", "supportedCurrencies", "donateLink" }] }`.
+
+```bash
+curl http://localhost:8787/charities
+```
+
+```json
+{
+  "charities": [
+    {
+      "charityName": "The Salvation Army",
+      "description": "The Salvation Army provides food, shelter, disaster relief, and other social services to people in need across local communities.",
+      "supportedCurrencies": ["USD"],
+      "donateLink": "https://www.salvationarmyusa.org/ways-to-give/"
+    }
+  ]
+}
+```
+
 ### `GET /health`
 
 Liveness check: `{ "ok": true }`.
@@ -182,6 +217,9 @@ You never write this interface by hand, though. There are two ways to get one:
   "id": "salvation-army",
   "name": "The Salvation Army (via GoFundMe Charity)",
   "charityName": "The Salvation Army",
+  "description": "The Salvation Army provides food, shelter, disaster relief, and other social services to people in need across local communities.",
+  "supportedCurrencies": ["USD"],
+  "donateLink": "https://www.salvationarmyusa.org/ways-to-give/",
   "currency": "USD",
   "trustedDkimDomains": ["prosend.gofundme.com"],
   "trustedFromAddress": "info@the-salvation-army-national-corp.prosend.gofundme.com",
@@ -191,17 +229,27 @@ You never write this interface by hand, though. There are two ways to get one:
 }
 ```
 
-| Field                | Required | Description                                                                 |
+| Field                 | Required | Description                                                                 |
 | --------------------- | -------- | ---------------------------------------------------------------------------- |
 | `id`                  | yes      | Unique, stable, lowercase-with-hyphens.                                      |
 | `name`                | yes      | Human-readable name for logs/docs.                                           |
-| `charityName`         | yes      | Reported as-is in a successful result.                                       |
-| `currency`            | yes      | ISO 4217 code, e.g. `"USD"`. This template is assumed to always use one currency. |
+| `charityName`         | yes      | Reported in a successful result, and shown via `GET /charities`.            |
+| `description`         | yes      | Brief, plain-language description of what the charity does. Shown via `GET /charities`. |
+| `supportedCurrencies` | yes      | Array of ISO 4217 codes this charity's donation page accepts. Display-only -- see below. |
+| `donateLink`          | yes      | `https://` URL where a user can go make a donation. Shown via `GET /charities`. |
+| `currency`            | yes      | ISO 4217 code this template's `amountPattern` is written to extract, e.g. `"USD"`. A parsing detail, not the same thing as `supportedCurrencies`. |
 | `trustedDkimDomains`  | yes      | Array of DKIM `d=` domains this plugin trusts.                               |
 | `trustedFromAddress`  | no       | Exact `From:` address required. See below -- needed for shared platforms.    |
 | `subjectPattern`      | yes      | Regex tested against the subject (case-insensitive). No capture group needed.|
 | `amountPattern`       | yes      | Regex with one capture group: the donation amount, e.g. `"12.34"`.           |
 | `datePattern`         | yes      | Regex with one capture group: a `Date`-parseable date string.                |
+
+`currency` and `supportedCurrencies` are deliberately separate: `currency` is what this
+specific regex template is written to extract from a receipt's body (a parsing detail,
+always exactly one), while `supportedCurrencies` is informational metadata about what the
+charity's donation page accepts overall (for a donation-picker UI) -- they may not always
+match, e.g. if a charity accepts multiple currencies but this particular receipt template
+only ever reports one of them.
 
 A plugin **file** is a JSON array of these objects -- one file can hold any number of
 plugins, including a single one. A bad entry (invalid regex, missing field, malformed id)

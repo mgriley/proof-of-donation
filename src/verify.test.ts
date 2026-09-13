@@ -23,6 +23,12 @@ const fakePlugin: ReceiptPlugin = {
   id: 'test-charity',
   name: 'Test Charity',
   trustedDkimDomains: [DOMAIN],
+  charityInfo: {
+    charityName: 'Test Charity',
+    description: 'A charity that does good things, for testing purposes.',
+    supportedCurrencies: ['USD'],
+    donateLink: 'https://donate.test-charity.example/give'
+  },
   parse(message) {
     if (!/thank you|donation/i.test(message.subject)) return null;
     const text = message.text ?? '';
@@ -176,7 +182,7 @@ test('end-to-end: a DKIM signature from an untrusted domain is rejected even wit
   });
 
   assert.equal(result.valid, false);
-  assert.match(result.reason ?? '', /not trusted/);
+  assert.match(result.reason ?? '', /isn't supported by this server/);
 });
 
 test('end-to-end: fails when the message has no DKIM signature at all', async () => {
@@ -188,7 +194,7 @@ test('end-to-end: fails when the message has no DKIM signature at all', async ()
   const result = await verifyDonation({ emlBuffer: raw, minAmount: 10, maxAgeHours: 24 }, [fakePlugin]);
 
   assert.equal(result.valid, false);
-  assert.match(result.reason ?? '', /no passing DKIM signature/);
+  assert.match(result.reason ?? '', /authenticity could not be verified/);
 });
 
 test('end-to-end: fails when the message body was altered after signing (DKIM signature mismatch)', async () => {
@@ -207,7 +213,7 @@ test('end-to-end: fails when the message body was altered after signing (DKIM si
   });
 
   assert.equal(result.valid, false);
-  assert.match(result.reason ?? '', /no passing DKIM signature/);
+  assert.match(result.reason ?? '', /authenticity could not be verified/);
 });
 
 test('end-to-end: fails when the DKIM public key on DNS does not match the signature', async () => {
@@ -223,7 +229,7 @@ test('end-to-end: fails when the DKIM public key on DNS does not match the signa
   });
 
   assert.equal(result.valid, false);
-  assert.match(result.reason ?? '', /no passing DKIM signature/);
+  assert.match(result.reason ?? '', /authenticity could not be verified/);
 });
 
 test('end-to-end: fails gracefully (does not throw) on input that is not an email at all', async () => {
@@ -249,7 +255,7 @@ test('end-to-end: fails when receipt currency does not match the required curren
   );
 
   assert.equal(result.valid, false);
-  assert.match(result.reason ?? '', /does not match required currency/);
+  assert.match(result.reason ?? '', /is required/);
 });
 
 test('end-to-end: fails when the donation timestamp is in the future', async () => {
@@ -289,21 +295,21 @@ test('end-to-end: fails when a trusted domain signs a message that matches no pl
   });
 
   assert.equal(result.valid, false);
-  assert.match(result.reason ?? '', /did not match the receipt format/);
+  assert.match(result.reason ?? '', /doesn't match a known donation receipt format/);
 });
 
 test('rejects when no plugins are enabled on the server', async () => {
   const result = await verifyDonation({ emlBuffer: Buffer.from('irrelevant'), minAmount: 10, maxAgeHours: 24 }, []);
   assert.equal(result.valid, false);
-  assert.match(result.reason ?? '', /no plugins enabled/);
+  assert.match(result.reason ?? '', /no supported charities configured/);
 });
 
 test('rejects requests with an invalid minAmount or maxAgeHours before doing any DKIM work', async () => {
   const negativeAmount = await verifyDonation({ emlBuffer: Buffer.from(''), minAmount: -1, maxAgeHours: 24 }, [fakePlugin]);
   assert.equal(negativeAmount.valid, false);
-  assert.match(negativeAmount.reason ?? '', /minAmount must be a non-negative number/);
+  assert.match(negativeAmount.reason ?? '', /minAmount must be zero or greater/);
 
   const zeroAge = await verifyDonation({ emlBuffer: Buffer.from(''), minAmount: 10, maxAgeHours: 0 }, [fakePlugin]);
   assert.equal(zeroAge.valid, false);
-  assert.match(zeroAge.reason ?? '', /maxAgeHours must be a positive number/);
+  assert.match(zeroAge.reason ?? '', /maxAgeHours must be greater than zero/);
 });

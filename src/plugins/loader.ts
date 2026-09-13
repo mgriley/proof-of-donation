@@ -56,12 +56,19 @@ function loadJsonPluginFile(filePath: string): ReceiptPlugin[] {
 function isReceiptPlugin(value: unknown): value is ReceiptPlugin {
   if (!value || typeof value !== 'object') return false;
   const p = value as Record<string, unknown>;
+  const info = p.charityInfo as Record<string, unknown> | undefined;
   return (
     typeof p.id === 'string' &&
     typeof p.name === 'string' &&
     Array.isArray(p.trustedDkimDomains) &&
     p.trustedDkimDomains.every((d) => typeof d === 'string') &&
-    typeof p.parse === 'function'
+    typeof p.parse === 'function' &&
+    !!info &&
+    typeof info.charityName === 'string' &&
+    typeof info.description === 'string' &&
+    Array.isArray(info.supportedCurrencies) &&
+    info.supportedCurrencies.every((c) => typeof c === 'string') &&
+    typeof info.donateLink === 'string'
   );
 }
 

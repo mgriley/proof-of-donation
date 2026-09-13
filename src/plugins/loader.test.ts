@@ -13,6 +13,9 @@ const VALID_DESCRIPTOR = {
   id: 'from-json',
   name: 'From JSON',
   charityName: 'From JSON Charity',
+  description: 'A charity loaded from a JSON plugin file, for testing purposes.',
+  supportedCurrencies: ['USD'],
+  donateLink: 'https://donate.json-charity.example/give',
   currency: 'USD',
   trustedDkimDomains: ['json-charity.example'],
   subjectPattern: 'donation',
@@ -47,6 +50,12 @@ test('loads a .js file in a plugin directory as a code-based ReceiptPlugin (defa
         id: 'from-js',
         name: 'From JS',
         trustedDkimDomains: ['code-charity.example'],
+        charityInfo: {
+          charityName: 'From JS Charity',
+          description: 'A charity loaded from a code plugin, for testing purposes.',
+          supportedCurrencies: ['USD'],
+          donateLink: 'https://donate.code-charity.example/give'
+        },
         parse(message) { return null; }
       };`
     );
@@ -66,6 +75,12 @@ test('loads a .js file exporting a named `plugin` instead of a default export', 
         id: 'from-js-named',
         name: 'From JS Named',
         trustedDkimDomains: ['named-charity.example'],
+        charityInfo: {
+          charityName: 'From JS Named Charity',
+          description: 'A charity loaded from a named-export code plugin, for testing purposes.',
+          supportedCurrencies: ['USD'],
+          donateLink: 'https://donate.named-charity.example/give'
+        },
         parse(message) { return null; }
       };`
     );

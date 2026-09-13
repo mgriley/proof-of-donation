@@ -10,6 +10,9 @@ const VALID: RegexPluginDescriptor = {
   id: 'test-charity',
   name: 'Test Charity',
   charityName: 'Test Charity',
+  description: 'A charity that does good things, for testing purposes.',
+  supportedCurrencies: ['usd', 'cad'], // deliberately lowercase, to check normalization
+  donateLink: 'https://donate.test-charity.example/give',
   currency: 'usd', // deliberately lowercase, to check normalization
   trustedDkimDomains: ['Test-Charity.Example'], // deliberately mixed case
   trustedFromAddress: 'Info@Test-Charity.Example',
@@ -22,6 +25,16 @@ test('compiles a valid descriptor and lowercases domains/addresses/currency', ()
   const plugin = compileRegexPlugin(VALID);
   assert.equal(plugin.id, 'test-charity');
   assert.deepEqual(plugin.trustedDkimDomains, ['test-charity.example']);
+});
+
+test('compiles charityInfo with normalized currencies', () => {
+  const plugin = compileRegexPlugin(VALID);
+  assert.deepEqual(plugin.charityInfo, {
+    charityName: 'Test Charity',
+    description: 'A charity that does good things, for testing purposes.',
+    supportedCurrencies: ['USD', 'CAD'],
+    donateLink: 'https://donate.test-charity.example/give'
+  });
 });
 
 test('parses a matching message into a DonationReceipt', () => {
@@ -108,6 +121,12 @@ for (const [field, value, expectedMessage] of [
   ['id', 'Not_Valid!', /"id" must be lowercase alphanumeric/],
   ['name', '', /"name" must be a non-empty string/],
   ['charityName', '', /"charityName" must be a non-empty string/],
+  ['description', '', /"description" must be a non-empty string/],
+  ['donateLink', '', /"donateLink" must be a non-empty string/],
+  ['donateLink', 'not a url', /"donateLink" must be a valid URL/],
+  ['donateLink', 'http://donate.test-charity.example', /"donateLink" must be an https:\/\/ URL/],
+  ['supportedCurrencies', [], /"supportedCurrencies" must be a non-empty array/],
+  ['supportedCurrencies', ['US'], /3-letter ISO 4217 code/],
   ['currency', 'US', /3-letter ISO 4217 code/],
   ['currency', '', /"currency" must be a non-empty string/],
   ['trustedDkimDomains', [], /"trustedDkimDomains" must be a non-empty array/],
@@ -168,6 +187,11 @@ test('the bundled plugins/salvation-army.json file compiles and matches a real-s
   assert.equal(receipt?.donatedAt.getUTCFullYear(), 2026);
   assert.equal(receipt?.donatedAt.getUTCMonth(), 8);
   assert.equal(receipt?.donatedAt.getUTCDate(), 12);
+
+  assert.equal(plugin.charityInfo.charityName, 'The Salvation Army');
+  assert.ok(plugin.charityInfo.description.length > 0);
+  assert.deepEqual(plugin.charityInfo.supportedCurrencies, ['USD']);
+  assert.match(plugin.charityInfo.donateLink, /^https:\/\//);
 
   // And confirms it still rejects an untrusted From address on the same shared platform.
   const impostor = plugin.parse({

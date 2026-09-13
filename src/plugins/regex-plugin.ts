@@ -16,9 +16,19 @@ export interface RegexPluginDescriptor {
   id: string;
   /** Human-readable name for logs/docs. */
   name: string;
-  /** Charity name to report in a successful result. */
+  /** Charity name to report in a successful result, and to show a user picking who to donate to. */
   charityName: string;
-  /** ISO 4217 currency code, e.g. "USD". This template is assumed to always use one currency. */
+  /** Brief, plain-language description of what the charity does, for a donation-picker UI. */
+  description: string;
+  /** Currencies this charity's donation page accepts, for display purposes. */
+  supportedCurrencies: string[];
+  /** URL where a user can actually go make a donation to this charity. */
+  donateLink: string;
+  /**
+   * ISO 4217 currency code this template's amountPattern is written to extract, e.g. "USD".
+   * A parsing detail, not necessarily the same list as supportedCurrencies -- one receipt
+   * reflects whatever currency that particular donation happened to use.
+   */
   currency: string;
   /** DKIM `d=` domains this plugin trusts. */
   trustedDkimDomains: string[];
@@ -55,6 +65,28 @@ function compileRegex(pattern: string, field: string, context: string): RegExp {
   }
 }
 
+function assertCurrencyCode(value: unknown, field: string, context: string): string {
+  const currency = assertNonEmptyString(value, field, context).toUpperCase();
+  if (!CURRENCY_PATTERN.test(currency)) {
+    throw new Error(`plugin "${context}": "${field}" must be a 3-letter ISO 4217 code, e.g. "USD"`);
+  }
+  return currency;
+}
+
+function assertHttpsUrl(value: unknown, field: string, context: string): string {
+  const url = assertNonEmptyString(value, field, context);
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    throw new Error(`plugin "${context}": "${field}" must be a valid URL`);
+  }
+  if (parsed.protocol !== 'https:') {
+    throw new Error(`plugin "${context}": "${field}" must be an https:// URL`);
+  }
+  return url;
+}
+
 /** Validates a RegexPluginDescriptor and compiles it into a ReceiptPlugin. Throws on any
  * malformed field, naming the offending plugin id and field so a bad file fails loudly at
  * startup rather than silently matching nothing (or worse, matching too much). */
@@ -65,10 +97,15 @@ export function compileRegexPlugin(descriptor: RegexPluginDescriptor): ReceiptPl
   }
   const name = assertNonEmptyString(descriptor.name, 'name', id);
   const charityName = assertNonEmptyString(descriptor.charityName, 'charityName', id);
-  const currency = assertNonEmptyString(descriptor.currency, 'currency', id).toUpperCase();
-  if (!CURRENCY_PATTERN.test(currency)) {
-    throw new Error(`plugin "${id}": "currency" must be a 3-letter ISO 4217 code, e.g. "USD"`);
+  const description = assertNonEmptyString(descriptor.description, 'description', id);
+  const donateLink = assertHttpsUrl(descriptor.donateLink, 'donateLink', id);
+  if (!Array.isArray(descriptor.supportedCurrencies) || descriptor.supportedCurrencies.length === 0) {
+    throw new Error(`plugin "${id}": "supportedCurrencies" must be a non-empty array of currency codes`);
   }
+  const supportedCurrencies = descriptor.supportedCurrencies.map((c, i) =>
+    assertCurrencyCode(c, `supportedCurrencies[${i}]`, id)
+  );
+  const currency = assertCurrencyCode(descriptor.currency, 'currency', id);
   if (!Array.isArray(descriptor.trustedDkimDomains) || descriptor.trustedDkimDomains.length === 0) {
     throw new Error(`plugin "${id}": "trustedDkimDomains" must be a non-empty array of domain strings`);
   }
@@ -87,6 +124,7 @@ export function compileRegexPlugin(descriptor: RegexPluginDescriptor): ReceiptPl
     id,
     name,
     trustedDkimDomains,
+    charityInfo: { charityName, description, supportedCurrencies, donateLink },
     parse(message: VerifiedMessage): DonationReceipt | null {
       if (trustedFromAddress && message.from.address !== trustedFromAddress) return null;
       if (!subjectRegex.test(message.subject)) return null;

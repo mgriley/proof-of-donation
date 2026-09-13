@@ -23,10 +23,15 @@ export function createServer(plugins: ReceiptPlugin[]) {
     });
   });
 
+  // For showing an end user "here's who you can donate to" before they've made a donation.
+  app.get('/charities', (_req, res) => {
+    res.json({ charities: plugins.map((p) => p.charityInfo) });
+  });
+
   app.post('/verify', express.raw({ type: () => true, limit: '10mb' }), async (req: Request, res: Response) => {
     const emlBuffer = req.body;
     if (!Buffer.isBuffer(emlBuffer) || emlBuffer.length === 0) {
-      res.status(400).json({ valid: false, reason: 'request body must be the raw .eml message content' });
+      res.status(400).json({ valid: false, reason: 'Please upload the donation receipt as a raw .eml file.' });
       return;
     }
 
@@ -37,7 +42,7 @@ export function createServer(plugins: ReceiptPlugin[]) {
     if (minAmountRaw === undefined || maxAgeHoursRaw === undefined) {
       res.status(400).json({
         valid: false,
-        reason: 'query parameters minAmount and maxAgeHours are required'
+        reason: 'A minAmount and maxAgeHours value are both required.'
       });
       return;
     }
@@ -50,7 +55,7 @@ export function createServer(plugins: ReceiptPlugin[]) {
       res.json(result);
     } catch (err) {
       console.error('verify error', err);
-      res.status(500).json({ valid: false, reason: 'internal error while verifying receipt' });
+      res.status(500).json({ valid: false, reason: 'Something went wrong while verifying this receipt. Please try again.' });
     }
   });
 

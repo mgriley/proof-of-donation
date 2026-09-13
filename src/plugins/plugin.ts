@@ -16,6 +16,8 @@ export interface ReceiptPlugin {
    * from these domains without a passing signature.
    */
   trustedDkimDomains: string[];
+  /** Static display info for this charity, e.g. for a donation-picker UI. See CharityInfo. */
+  charityInfo: CharityInfo;
   /**
    * Try to extract a donation receipt from a DKIM-verified message.
    * Return null if this message doesn't look like a receipt this plugin understands
@@ -23,6 +25,26 @@ export interface ReceiptPlugin {
    * for "not a match", only for genuinely unexpected errors.
    */
   parse(message: VerifiedMessage): DonationReceipt | null;
+}
+
+/**
+ * Static, human-authored info about a supported charity, for showing an end user "here's
+ * who you can donate to" before they've made a donation -- distinct from DonationReceipt,
+ * which describes one specific, already-made donation. Returned by `GET /charities`.
+ */
+export interface CharityInfo {
+  /** Charity/organization name, as shown to a user picking who to donate to. */
+  charityName: string;
+  /** Brief, plain-language description of what the charity does. */
+  description: string;
+  /**
+   * Currencies this charity's donation page accepts, for display purposes -- not
+   * necessarily the same as any single receipt's currency, which reflects what one
+   * particular donation happened to use.
+   */
+  supportedCurrencies: string[];
+  /** URL where a user can actually go make a donation to this charity. */
+  donateLink: string;
 }
 
 /** A DKIM-verified email, with just the fields plugins need to parse a receipt. */
