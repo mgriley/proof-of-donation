@@ -1,23 +1,54 @@
-# ProofOfDonation
+# Proof of Donation
 
-A CAPTCHA alternative: instead of solving a puzzle, users prove they donated to a real
-charity. Self-hosted, verifies a forwarded donation receipt email via DKIM — no charity or
-payment processor integration required.
+Is your website overrun by bots, grifters, rogue agents, and other assorted scum-of-the-earth?
 
-**Not a guarantee.** It raises the cost of creating a fake account; it won't stop a
-determined attacker willing to spend real money. See [Trust model & limitations](#trust-model--limitations).
+Try replacing your CAPTCHAs with charitable donations!
+
+Proof-of-donation is a self-hosted alternative to CAPTCHA. Instead of having your new users fill
+out a puzzle, have them donate to a supported charity and upload their email receipt. The proof-of-donation
+server will use email signatures (DKIM) to verify the authenticity of the receipt ("did the user actually
+donate X dollars somewhere?") and return a pass/no-pass.
+
+Similar to CAPTCHA, proof-of-donation cannot reasonably stop a determined attacker. It can, however,
+increase the cost of creating hundreds or thousands of low-effort bot accounts. This can make a substantial
+difference for some websites and forums. See [Trust model & limitations](#trust-model--limitations).
+
+This project is very new and not currently used anywhere in production. If you'd like to try it
+out in the wild, happy to help with setup :)
 
 ## How it works
 
-1. User uploads their donation receipt (`.eml` file).
-2. Server verifies the email's DKIM signature — proves it's genuine and unmodified.
-3. A plugin recognizes the sender and extracts the charity, amount, currency, date, and donor email.
-4. Server checks that against your requirements (min amount, max age, currency) and returns JSON.
+1. You, a website owner, self-host a proof-of-donation server internally.
+2. You modify your sign-up page to have the user upload a donation receipt (`.eml` file), instead of
+solving a CAPTCHA.
+3. Send `POST /verify` to the server from your backend. It will verify the receipt and return pass/no-pass.
+4. If they pass, continue with account creation :)
 
-Works with any charity that emails a receipt — no cooperation needed. Stateless: no
-database, no memory of past requests (see [Statelessness](#statelessness)).
+How does it verify a receipt? Most modern email senders cryptographically sign emails sent by them (using a
+security standard called DKIM). We can check this signature to verify that the email is in fact from the
+given sender and that it has not been tampered with. Once verified, we have a small plugin parse out the
+needed info like donation amount from the email, which is typically just a matter of writing an appropriate
+regex.
+
+The system can work with any charity that emails a donation receipt (without any direct integration needed from
+their end). A plugin system allows extending support to whatever charities you wish to support. All you need is
+a small plugin that parses basic info like the donation amount from their receipt emails.
+
+The server itself is meant to be simple to host. It is entirely stateless, with no database or memory of
+past requests.
+
+### Demo
+
+Try out the demo. It will give you a sense of the proposed user flow.
+
+```bash
+npm install
+npm run demo
+```
 
 ## Quickstart
+
+Run the server with node:
 
 ```bash
 npm install
@@ -26,21 +57,15 @@ npm run build
 node --env-file=.env dist/index.js
 ```
 
-Or for local development (auto-restart, runs TypeScript directly):
+Run the server in development mode (with auto-reload):
 
 ```bash
 npm install
 npm run dev
 ```
 
-Run the tests (synthetic, offline-signed emails and mock DNS — no real network access or
-charity data needed):
-
-```bash
-npm test
-```
-
 ### Docker
+
 
 ```bash
 docker run -p 8787:8787 ghcr.io/mgriley/proof-of-donation:latest
@@ -53,17 +78,8 @@ docker build -t proof-of-donation .
 docker run -p 8787:8787 proof-of-donation
 ```
 
-`:latest` tracks `master` (no versioned releases yet). No volume needed — stateless.
+`:latest` tracks `master` (no versioned releases yet).
 
-### Demo
-
-```bash
-npm install
-npm run demo
-```
-
-Opens a small local page to upload a receipt and see the real verification result — nothing
-leaves your machine.
 
 ## API
 
@@ -78,7 +94,7 @@ Request body: the raw `.eml` message bytes. Query parameters:
 | `currency`    | no       | Required ISO 4217 currency code (e.g. `USD`). If omitted, any currency the plugin reports is accepted. |
 
 No `claimedEmail` param — the server doesn't bind identity for you. It reports `donorEmail`;
-compare it yourself. See [Statelessness](#statelessness).
+compare it yourself. See [Integration Guide](#integration-guide).
 
 Always HTTP 200 — check `valid`. Other fields are present whenever a receipt was parsed,
 pass or fail:
@@ -115,10 +131,6 @@ curl -X POST "http://localhost:8787/verify?minAmount=5&maxAgeHours=48" \
   --data-binary @receipt.eml
 ```
 
-### `GET /plugins`
-
-What this instance can verify: `{ "plugins": [{ "id", "name", "trustedDkimDomains" }] }`.
-
 ### `GET /charities`
 
 Charities to show a donor before they've donated (e.g. a donation picker):
@@ -140,6 +152,10 @@ curl http://localhost:8787/charities
   ]
 }
 ```
+
+### `GET /plugins`
+
+What this instance can verify: `{ "plugins": [{ "id", "name", "trustedDkimDomains" }] }`.
 
 ### `GET /health`
 
@@ -239,16 +255,22 @@ For a template that can't be expressed as regexes, implement `ReceiptPlugin` dir
 `DISABLE_BUNDLED_PLUGINS=true` skips the bundled `plugins/` directory, for a fully custom
 charity list.
 
-## Statelessness
+## Integration Guide
 
-The server keeps no database — it doesn't bind identity or prevent replay itself. `/verify`
-returns two fields for you to use instead:
+**Host this internally, not publicly.** `/verify` has no built-in auth or rate limiting --
+it's meant to be called from your own backend, not exposed directly to the internet or to a
+user's browser.
 
-- **`donorEmail`** — the email the receipt was sent to. Compare it against the account being created.
-- **`receiptId`** — a stable id for this receipt. Store it alongside the new account, in the
-  same database transaction, and reject if already used.
+**The server is stateless** — no database, no memory between requests. That means your
+website's server is responsible for:
 
-Do both, in your own database — otherwise the same receipt can validate unlimited signups.
+- **Checking `donorEmail`** against an email address you've already validated for the
+  account being created. The server has no idea which account this is for, so it can't do
+  this check for you.
+- **Storing `receiptId`, if you want replay protection** — e.g. to stop a user from reusing
+  the same receipt over and over to create many accounts with the same email. If that
+  matters to you, save `receiptId` alongside the account you create, and reject any signup
+  that reuses one you've already seen.
 
 ## Trust model & limitations
 
@@ -260,7 +282,7 @@ Do both, in your own database — otherwise the same receipt can validate unlimi
   soon after donating.
 - **Plugins are trusted code.** Only install ones you trust; a malicious plugin has full
   Node.js access.
-- **No identity or replay protection here, by design** — see [Statelessness](#statelessness).
+- **No identity or replay protection here, by design** — see [Integration Guide](#integration-guide).
 
 ## Configuration
 

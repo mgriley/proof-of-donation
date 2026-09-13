@@ -14,7 +14,7 @@ import { verifyDonation } from './verify.js';
 //
 // Note: this server is stateless and does not do identity binding or replay protection --
 // it returns donorEmail and receiptId so the integrator can do both against their own
-// database. See README "Statelessness".
+// database. See README "Integration Guide".
 
 const SELECTOR = 'test';
 const DOMAIN = 'test-charity.example';

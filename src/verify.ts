@@ -14,7 +14,7 @@ export interface VerifyRequest {
 export interface VerifyResult {
   /** Whether the receipt satisfies minAmount/maxAgeHours/currency. Identity binding
    * (does donorEmail match the account being created) is the integrator's job -- see
-   * README "Statelessness". */
+   * README "Integration Guide". */
   valid: boolean;
   reason?: string;
   pluginId?: string;
