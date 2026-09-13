@@ -252,8 +252,10 @@ Do both, in your own database — otherwise the same receipt can validate unlimi
 
 ## Trust model & limitations
 
-- **Friction, not proof.** DKIM proves the email is unmodified and from the claimed domain
-  — not donor intent. Someone could donate to themselves to farm a valid receipt.
+- **Friction, not proof.** DKIM proves a receipt is genuine and from an already-trusted
+  charity — not that the donor meant it altruistically. Anyone willing to pay the minimum
+  amount can donate through a real, already-supported charity purely to obtain a usable
+  receipt; no fake domain or plugin is needed.
 - **No refund/chargeback tracking.** A receipt valid at donation time stays valid even if
   later refunded.
 - **No currency conversion.** A `CAD` receipt is rejected outright if you require `USD`.
