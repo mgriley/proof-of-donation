@@ -1,0 +1,11 @@
+node_modules/
+dist/
+*.log
+.env
+data/
+*.sqlite
+*.sqlite-journal
+
+# Real donation receipts used locally to build/verify plugins against -- these contain
+# real personal data (names, emails, amounts, PDF attachments) and must never be committed.
+example_receipts/
