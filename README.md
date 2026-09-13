@@ -6,7 +6,7 @@ Try replacing your CAPTCHAs with charitable donations!
 
 Proof-of-donation is a self-hosted alternative to CAPTCHA. Instead of having your new users fill
 out a puzzle, have them donate to a supported charity and upload their email receipt. The proof-of-donation
-server will use email signatures (DKIM) to verify the authenticity of the receipt ("did the user actually
+server uses email signatures (DKIM) to verify the authenticity of the receipt ("did the user actually
 donate X dollars somewhere?") and return a pass/no-pass.
 
 Similar to CAPTCHA, proof-of-donation cannot reasonably stop a determined attacker. It can, however,
