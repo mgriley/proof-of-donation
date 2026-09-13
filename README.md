@@ -60,12 +60,23 @@ npm test
 
 ### Docker
 
+A prebuilt image (linux/amd64 and linux/arm64) is published to GitHub Container Registry
+from every push to `master` -- no build step needed:
+
+```bash
+docker run -p 8787:8787 ghcr.io/mgriley/proof-of-donation:latest
+```
+
+Or build it yourself from source:
+
 ```bash
 docker build -t proof-of-donation .
 docker run -p 8787:8787 proof-of-donation
 ```
 
-No volume needed -- the server keeps no state of its own.
+No volume needed -- the server keeps no state of its own. Note `:latest` is a rolling tag
+tracking `master`, not a stable release -- there's no versioned tag yet (see
+`.github/workflows/docker-publish.yml`).
 
 ### Try it locally (demo)
 
