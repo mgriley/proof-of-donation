@@ -22,14 +22,18 @@ real money and effort. See [Trust model & known limitations](#trust-model--known
 4. The matching plugin extracts the donation amount, currency, date, and donor email from
    the verified message.
 5. The server checks the extracted donation against the caller's requirements (minimum
-   amount, maximum age, matching email, currency) and against a local replay-protection
-   database (so one receipt can't validate more than one signup).
-6. The server returns a simple `{ valid, reason?, charity?, amount?, ... }` JSON response.
-   It never returns the raw email content back to the caller.
+   amount, maximum age, currency).
+6. The server returns a simple `{ valid, reason?, charity?, amount?, donorEmail?, receiptId?, ... }`
+   JSON response. It never returns the raw email content back to the caller.
 
 No cooperation from the charity or donation platform is required -- this works with any
 donation receipt sent to a normal inbox, which is what makes it buildable and self-hostable
 by anyone.
+
+This server is **stateless** -- it keeps no database and no memory of past requests. It
+answers "does this receipt satisfy these requirements, and who was it sent to," and nothing
+more. See [Statelessness & the integrator's responsibilities](#statelessness--the-integrators-responsibilities)
+for what that means for you as an integrator.
 
 ## Quickstart
 
@@ -58,8 +62,10 @@ npm test
 
 ```bash
 docker build -t proof-of-donation .
-docker run -p 8787:8787 -v proof-of-donation-data:/data proof-of-donation
+docker run -p 8787:8787 proof-of-donation
 ```
+
+No volume needed -- the server keeps no state of its own.
 
 ## API
 
@@ -68,29 +74,52 @@ docker run -p 8787:8787 -v proof-of-donation-data:/data proof-of-donation
 Request body: the raw `.eml` message bytes (any `Content-Type` is accepted as opaque
 bytes). Query parameters:
 
-| Param          | Required | Description                                                              |
-| -------------- | -------- | ------------------------------------------------------------------------- |
-| `claimedEmail` | yes      | The email address the caller is trying to prove donated. Must match the receipt's `To:` address. |
-| `minAmount`    | yes      | Minimum donation amount required, in the receipt's major currency unit.   |
-| `maxAgeHours`  | yes      | How recent the donation must be, in hours. Capped by the server's `MAX_AGE_HOURS_CEILING`. |
-| `currency`     | no       | Required ISO 4217 currency code (e.g. `USD`). If omitted, any currency the plugin reports is accepted. |
-| `plugin`       | no       | Restrict matching to one specific installed plugin id.                    |
+| Param         | Required | Description                                                              |
+| ------------- | -------- | ------------------------------------------------------------------------- |
+| `minAmount`   | yes      | Minimum donation amount required, in the receipt's major currency unit.   |
+| `maxAgeHours` | yes      | How recent the donation must be, in hours.                                |
+| `currency`    | no       | Required ISO 4217 currency code (e.g. `USD`). If omitted, any currency the plugin reports is accepted. |
+
+Note there's no `claimedEmail` param -- this server doesn't do identity binding for you.
+It reports whichever email the receipt was actually sent to (`donorEmail`); you compare
+that against your own already-verified account email. See
+[Statelessness & the integrator's responsibilities](#statelessness--the-integrators-responsibilities).
 
 Response (always HTTP 200 for a well-formed request, even when the donation doesn't
-qualify -- check the `valid` field):
+qualify -- check the `valid` field). Fields other than `valid`/`reason` are present
+whenever a receipt was successfully parsed, whether or not it met your requirements:
 
 ```json
-{ "valid": true, "pluginId": "salvation-army", "charity": "The Salvation Army", "amount": 10, "currency": "USD", "donatedAt": "2026-09-12T07:00:00.000Z" }
+{
+  "valid": true,
+  "pluginId": "salvation-army",
+  "charity": "The Salvation Army",
+  "amount": 10,
+  "currency": "USD",
+  "donatedAt": "2026-09-12T07:00:00.000Z",
+  "donorEmail": "donor@example.com",
+  "receiptId": "44d1f3ede445ee69333fffd826e8ac646d6f5c9f615ce8aa8945899e054471a2"
+}
 ```
 
 ```json
-{ "valid": false, "reason": "donation amount 5 USD is below the required minimum of 10" }
+{
+  "valid": false,
+  "reason": "donation amount 5 USD is below the required minimum of 10",
+  "pluginId": "salvation-army",
+  "charity": "The Salvation Army",
+  "amount": 5,
+  "currency": "USD",
+  "donatedAt": "2026-09-12T07:00:00.000Z",
+  "donorEmail": "donor@example.com",
+  "receiptId": "44d1f3ede445ee69333fffd826e8ac646d6f5c9f615ce8aa8945899e054471a2"
+}
 ```
 
 Example:
 
 ```bash
-curl -X POST "http://localhost:8787/verify?claimedEmail=you@example.com&minAmount=5&maxAgeHours=48" \
+curl -X POST "http://localhost:8787/verify?minAmount=5&maxAgeHours=48" \
   --data-binary @receipt.eml
 ```
 
@@ -160,6 +189,32 @@ example, including the comment on how that address was confirmed to be signed.
 5. Write a unit test against the real template's structure with fake donor data swapped in
    (see `src/plugins/builtin/salvation-army.test.ts`).
 
+## Statelessness & the integrator's responsibilities
+
+This server verifies and extracts facts from a receipt; it does not decide who those facts
+belong to or whether they've been used before. That's deliberate, not an oversight -- an
+earlier design had this server enforce identity matching and replay protection itself, and
+it had a real bug: if the integrator's own signup write failed *after* a successful
+`/verify` call (a crashed request, a bug, a timeout), the donor's receipt was already marked
+"used" here, permanently, with no way to retry -- through no fault of their own.
+
+Instead, `/verify` returns two things for the integrator to act on:
+
+- **`donorEmail`** -- the email address the receipt was actually sent to. Compare it
+  (case-insensitively) against the email address on the account already being created --
+  this is the identity check, and it belongs on your side because you're the one who knows
+  which account it needs to match.
+- **`receiptId`** -- a stable id derived from the receipt's DKIM signature. Store it
+  alongside the new account, **in the same database write/transaction** that creates the
+  account, and check for it before creating one. That's what actually prevents one receipt
+  from validating more than one signup: the check and the effect it's protecting happen
+  atomically, in your database, instead of being two separate steps across a network call
+  that can fail independently.
+
+This also means: if you don't store `receiptId` yourself, there is no replay protection at
+all, and the same receipt can validate unlimited signups. That's the real cost of statelessness
+here -- it's not a default you get for free anymore, it's a step you have to actually do.
+
 ## Trust model & known limitations
 
 - **This is a friction layer, not a guarantee.** DKIM proves an email is unmodified and
@@ -176,9 +231,9 @@ example, including the comment on how that address was confirmed to be signed.
   freshness window (`maxAgeHours`), since keys don't rotate on the timescale of hours.
 - **Plugins are trusted code.** Only enable/install plugins you trust; a malicious plugin
   has full Node.js access, same as any other server-side dependency.
-- **Multiple installed instances don't share replay state.** Replay protection is a local
-  SQLite database per instance. If you run more than one instance behind a load balancer,
-  point them at the same database file/volume, or a receipt could be used once per instance.
+- **No identity binding or replay protection happens here.** By design -- see
+  [Statelessness & the integrator's responsibilities](#statelessness--the-integrators-responsibilities).
+  If you don't implement both on your side, the same receipt can create unlimited accounts.
 
 ## Configuration
 
@@ -187,7 +242,5 @@ built-in `--env-file` flag, no extra dependency needed).
 
 ## Requirements
 
-Node.js >= 22.5 (uses the built-in `node:sqlite` module -- currently experimental upstream,
-which is why you'll see an `ExperimentalWarning` on startup; this avoids depending on a
-native compiled module like `better-sqlite3`, which is one less thing that can fail to
-build when someone self-hosts this).
+Node.js >= 20.18.1 (the floor set by the `mailauth` dependency). No database, no native
+modules to compile -- the server itself has no storage requirements at all.

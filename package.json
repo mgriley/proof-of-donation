@@ -1,7 +1,7 @@
 {
   "name": "proof-of-donation",
   "version": "0.1.0",
-  "description": "Self-hostable donation-receipt verification server. Verifies DKIM-signed charity donation receipt emails to attest that a given email address donated at least X to an approved charity within the last Y hours, without a human reviewer.",
+  "description": "Self-hostable donation-receipt verification server. Verifies DKIM-signed charity donation receipt emails and reports the donation amount, currency, date, and donor email, so a caller can require proof of a recent donation without a human reviewer.",
   "type": "module",
   "license": "MIT",
   "main": "dist/index.js",
@@ -14,16 +14,15 @@
   "dependencies": {
     "express": "^4.22.2",
     "mailauth": "^4.13.3",
-    "mailparser": "^3.9.26"
+    "postal-mime": "^3.0.0"
   },
   "devDependencies": {
     "@types/express": "^4.17.25",
-    "@types/mailparser": "^3.4.6",
     "@types/node": "^22.20.2",
     "tsx": "^4.23.13",
     "typescript": "^5.9.3"
   },
   "engines": {
-    "node": ">=22.5.0"
+    "node": ">=20.18.1"
   }
 }

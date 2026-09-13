@@ -6,7 +6,10 @@ import { salvationArmyPlugin } from './salvation-army.js';
 // donation!" receipt for The Salvation Army (verified 2026-09-12), with fake donor details
 // swapped in -- the real sample lives only in the untracked example_receipts/ directory
 // since it contains real personal donation data.
-const TRUSTED_FROM = 'The Salvation Army <info@the-salvation-army-national-corp.prosend.gofundme.com>';
+const TRUSTED_FROM = {
+  name: 'The Salvation Army',
+  address: 'info@the-salvation-army-national-corp.prosend.gofundme.com'
+};
 
 function fixtureBody(opts: { amount?: string; total?: string; dateText?: string }): string {
   return `
@@ -45,7 +48,7 @@ test('parses amount, currency, date, and donor email from a real-shaped receipt'
   const receipt = salvationArmyPlugin.parse({
     subject: 'Thank you for your donation!',
     from: TRUSTED_FROM,
-    to: 'Jane Donor <jane.donor@example.com>',
+    to: [{ name: 'Jane Donor', address: 'jane.donor@example.com' }],
     text: fixtureBody({}),
     dkimDomain: 'prosend.gofundme.com'
   });
@@ -65,8 +68,8 @@ test('parses amount, currency, date, and donor email from a real-shaped receipt'
 test('rejects a message whose From address is not the trusted Salvation Army account, even on the same platform', () => {
   const receipt = salvationArmyPlugin.parse({
     subject: 'Thank you for your donation!',
-    from: 'Some Other Charity <info@some-other-charity.prosend.gofundme.com>',
-    to: 'jane.donor@example.com',
+    from: { name: 'Some Other Charity', address: 'info@some-other-charity.prosend.gofundme.com' },
+    to: [{ name: '', address: 'jane.donor@example.com' }],
     text: fixtureBody({}),
     dkimDomain: 'prosend.gofundme.com'
   });
@@ -77,7 +80,7 @@ test('rejects an unrelated email from the trusted address (wrong subject/body)',
   const receipt = salvationArmyPlugin.parse({
     subject: 'Update your payment method',
     from: TRUSTED_FROM,
-    to: 'jane.donor@example.com',
+    to: [{ name: '', address: 'jane.donor@example.com' }],
     text: 'Please update your payment method to keep your monthly donation active.',
     dkimDomain: 'prosend.gofundme.com'
   });
@@ -88,18 +91,18 @@ test('rejects when the amount is missing', () => {
   const receipt = salvationArmyPlugin.parse({
     subject: 'Thank you for your donation!',
     from: TRUSTED_FROM,
-    to: 'jane.donor@example.com',
+    to: [{ name: '', address: 'jane.donor@example.com' }],
     text: 'Thank you for your donation to The Salvation Army.',
     dkimDomain: 'prosend.gofundme.com'
   });
   assert.equal(receipt, null);
 });
 
-test('rejects when the recipient (To:) has no parseable email address', () => {
+test('rejects when the recipient (To:) has no address at all', () => {
   const receipt = salvationArmyPlugin.parse({
     subject: 'Thank you for your donation!',
     from: TRUSTED_FROM,
-    to: '',
+    to: [],
     text: fixtureBody({}),
     dkimDomain: 'prosend.gofundme.com'
   });

@@ -1,5 +1,5 @@
 import type { DonationReceipt, ReceiptPlugin, VerifiedMessage } from '../../types.js';
-import { bodyText, firstEmailAddress, parseAmount } from '../util.js';
+import { bodyText, parseAmount } from '../util.js';
 
 // Verified against a real "Thank you for your donation!" receipt (2026-09-12).
 //
@@ -13,6 +13,7 @@ import { bodyText, firstEmailAddress, parseAmount } from '../util.js';
 // the sample's h= tag), that address can't be forged without invalidating the signature. So
 // trust here is anchored to this exact From address, not just the signing domain.
 const SIGNING_DOMAIN = 'prosend.gofundme.com';
+// Lowercased, to match the already-lowercased addresses this plugin is handed.
 const TRUSTED_FROM_ADDRESS = 'info@the-salvation-army-national-corp.prosend.gofundme.com';
 
 const RECEIPT_SUBJECT_PATTERN = /thank you|donation|receipt/i;
@@ -27,7 +28,7 @@ export const salvationArmyPlugin: ReceiptPlugin = {
   trustedDkimDomains: [SIGNING_DOMAIN],
 
   parse(message: VerifiedMessage): DonationReceipt | null {
-    if (!message.from.toLowerCase().includes(TRUSTED_FROM_ADDRESS)) return null;
+    if (message.from.address !== TRUSTED_FROM_ADDRESS) return null;
     if (!RECEIPT_SUBJECT_PATTERN.test(message.subject)) return null;
 
     const text = bodyText(message);
@@ -41,7 +42,7 @@ export const salvationArmyPlugin: ReceiptPlugin = {
     const donatedAt = dateMatch ? new Date(dateMatch[1]) : null;
     if (!donatedAt || Number.isNaN(donatedAt.getTime())) return null;
 
-    const donorEmail = firstEmailAddress(message.to);
+    const donorEmail = message.to[0]?.address;
     if (!donorEmail) return null;
 
     return {

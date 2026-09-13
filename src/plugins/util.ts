@@ -34,9 +34,3 @@ export function parseAmount(raw: string): number | null {
   const value = Number.parseFloat(cleaned);
   return Number.isFinite(value) ? value : null;
 }
-
-/** First bare email address found in a raw header value like '"Jane Doe" <jane@example.com>'. */
-export function firstEmailAddress(raw: string): string | null {
-  const match = raw.match(/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/i);
-  return match ? match[0].toLowerCase() : null;
-}

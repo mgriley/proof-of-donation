@@ -1,6 +1,5 @@
 import express, { Request, Response } from 'express';
 import type { ReceiptPlugin } from './types.js';
-import { ReceiptStore } from './db.js';
 import { verifyDonation } from './verify.js';
 
 function firstQueryString(value: unknown): string | undefined {
@@ -9,7 +8,7 @@ function firstQueryString(value: unknown): string | undefined {
   return undefined;
 }
 
-export function createServer(plugins: ReceiptPlugin[], store: ReceiptStore, maxAgeHoursCeiling: number) {
+export function createServer(plugins: ReceiptPlugin[]) {
   const app = express();
   app.disable('x-powered-by');
 
@@ -31,16 +30,14 @@ export function createServer(plugins: ReceiptPlugin[], store: ReceiptStore, maxA
       return;
     }
 
-    const claimedEmail = firstQueryString(req.query.claimedEmail);
     const minAmountRaw = firstQueryString(req.query.minAmount);
     const maxAgeHoursRaw = firstQueryString(req.query.maxAgeHours);
     const currency = firstQueryString(req.query.currency);
-    const pluginId = firstQueryString(req.query.plugin);
 
-    if (!claimedEmail || minAmountRaw === undefined || maxAgeHoursRaw === undefined) {
+    if (minAmountRaw === undefined || maxAgeHoursRaw === undefined) {
       res.status(400).json({
         valid: false,
-        reason: 'query parameters claimedEmail, minAmount, and maxAgeHours are required'
+        reason: 'query parameters minAmount and maxAgeHours are required'
       });
       return;
     }
@@ -49,12 +46,7 @@ export function createServer(plugins: ReceiptPlugin[], store: ReceiptStore, maxA
     const maxAgeHours = Number(maxAgeHoursRaw);
 
     try {
-      const result = await verifyDonation(
-        { emlBuffer, claimedEmail, minAmount, maxAgeHours, currency, pluginId },
-        plugins,
-        store,
-        maxAgeHoursCeiling
-      );
+      const result = await verifyDonation({ emlBuffer, minAmount, maxAgeHours, currency }, plugins);
       res.json(result);
     } catch (err) {
       console.error('verify error', err);

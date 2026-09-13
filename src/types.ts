@@ -13,13 +13,18 @@ export interface DonationReceipt {
   transactionId?: string;
 }
 
+export interface EmailAddress {
+  name: string;
+  /** Lowercased. */
+  address: string;
+}
+
 /** A DKIM-verified email, with just the fields plugins need to parse a receipt. */
 export interface VerifiedMessage {
   subject: string;
-  /** Raw From header value, e.g. "Salvation Army <noreply@salvationarmyusa.org>". */
-  from: string;
-  /** Raw To header value -- the donor's own email address is almost always here, not in the body. */
-  to: string;
+  from: EmailAddress;
+  /** Recipients from the To: header -- the donor's own email address is almost always here, not in the body. */
+  to: EmailAddress[];
   text?: string;
   html?: string;
   /** The DKIM d= domain that produced a passing signature for this message. */
