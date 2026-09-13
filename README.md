@@ -2,16 +2,12 @@
 
 Is your website overrun by bots, grifters, rogue agents, and other assorted scum-of-the-earth?
 
-Try replacing your CAPTCHAs with charitable donations!
+Try replacing your CAPTCHAs with charity donations!
 
-Proof-of-donation is a self-hosted alternative to CAPTCHA. Instead of having your new users fill
-out a puzzle, have them donate to a supported charity and upload their email receipt. The proof-of-donation
+Proof-of-donation is a self-hosted alternative to CAPTCHA. Instead of having your new users solve
+a puzzle, have them donate to a supported charity and upload their email receipt. The proof-of-donation
 server uses email signatures (DKIM) to verify the authenticity of the receipt ("did the user actually
 donate X dollars somewhere?") and return a pass/no-pass.
-
-Similar to CAPTCHA, proof-of-donation cannot reasonably stop a determined attacker. It can, however,
-increase the cost of creating hundreds or thousands of low-effort bot accounts. This can make a substantial
-difference for some websites and forums. See [Trust model & limitations](#trust-model--limitations).
 
 This project is very new and not currently used anywhere in production. If you'd like to try it
 out in the wild, happy to help with setup :)
@@ -273,6 +269,10 @@ website's server is responsible for:
   that reuses one you've already seen.
 
 ## Trust model & limitations
+
+Similar to CAPTCHA, proof-of-donation cannot reasonably stop a determined attacker. It can, however,
+increase the cost of creating hundreds or thousands of low-effort bot accounts. This can make a substantial
+difference for some websites and forums.
 
 - **No refund/chargeback tracking.** A receipt valid at donation time stays valid even if
   later refunded.
