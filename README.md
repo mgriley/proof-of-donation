@@ -9,7 +9,7 @@ a puzzle, have them donate to a supported charity and upload their email receipt
 server uses email signatures (DKIM) to verify the authenticity of the receipt ("did the user actually
 donate X dollars somewhere?") and return a pass/no-pass.
 
-This project is new and not currently used anywhere in production. If you'd like to try it
+Disclaimer: This project is new and not currently used anywhere in production. If you'd like to try it
 out in the wild, happy to help with setup :)
 
 ## How it works
