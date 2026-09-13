@@ -21,14 +21,11 @@ solving a CAPTCHA.
 4. If they pass, continue with account creation :)
 
 How does it verify a receipt? Most modern email senders cryptographically sign emails sent by them (using a
-security standard called DKIM). We can check this signature to verify that the email is in fact from the
-given sender and that it has not been tampered with. Once verified, we have a small plugin parse out the
-needed info like donation amount from the email, which is typically just a matter of writing an appropriate
-regex.
+security standard called DKIM). We use this signature to verify that the email is in fact from the
+given sender and that it has not been tampered with. Once verified, a plugin parses the needed info like donation amount.
 
-The system can work with any charity that emails a donation receipt (without any direct integration needed from
-their end). A plugin system allows extending support to whatever charities you wish to support. All you need is
-a small plugin that parses basic info like the donation amount from their receipt emails.
+The server can work with any charity that emails a donation receipt (without any direct integration needed from
+their end). Plugins can be made to enable whatever charities you wish to support. 
 
 The server itself is meant to be simple to host. It is entirely stateless, with no database or memory of
 past requests.
