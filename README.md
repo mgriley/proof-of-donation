@@ -155,7 +155,7 @@ curl http://localhost:8787/charities
   "charities": [
     {
       "charityName": "The Salvation Army",
-      "description": "The Salvation Army provides food, shelter, disaster relief, and other social services to people in need across local communities.",
+      "description": "The Salvation Army provides food, shelter, and other social services to people.",
       "supportedCurrencies": ["USD"],
       "donateLink": "https://www.salvationarmyusa.org/ways-to-give/"
     }
@@ -217,7 +217,7 @@ You never write this interface by hand, though. There are two ways to get one:
   "id": "salvation-army",
   "name": "The Salvation Army (via GoFundMe Charity)",
   "charityName": "The Salvation Army",
-  "description": "The Salvation Army provides food, shelter, disaster relief, and other social services to people in need across local communities.",
+  "description": "The Salvation Army provides food, shelter, and other social services to people in need.",
   "supportedCurrencies": ["USD"],
   "donateLink": "https://www.salvationarmyusa.org/ways-to-give/",
   "currency": "USD",
@@ -284,8 +284,13 @@ and sufficient on its own. See `plugins/salvation-army.json` for a worked exampl
 If the template genuinely can't be expressed as regexes against the subject/body (rare --
 e.g. the amount is only in a PDF attachment), implement `ReceiptPlugin` directly instead as
 a `.js` file in a `PLUGIN_DIRS` directory. Every directory listed in `PLUGIN_DIRS` (plus the
-bundled `plugins/` directory, always included) is scanned the same way: `.json` files load
-as RegexPlugins, `.js` files load as code-based plugins (default, or named `plugin`, export).
+bundled `plugins/` directory, included by default) is scanned recursively the same way:
+`.json` files load as RegexPlugins, `.js` files load as code-based plugins (default, or
+named `plugin`, export).
+
+Set `DISABLE_BUNDLED_PLUGINS=true` to skip the bundled `plugins/` directory entirely and use
+only `PLUGIN_DIRS` -- useful for running with a fully custom charity list instead of the
+defaults (see `.env.example`).
 
 ## Statelessness & the integrator's responsibilities
 

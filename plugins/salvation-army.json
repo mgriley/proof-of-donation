@@ -3,7 +3,7 @@
     "id": "salvation-army",
     "name": "The Salvation Army (via GoFundMe Charity)",
     "charityName": "The Salvation Army",
-    "description": "The Salvation Army provides food, shelter, disaster relief, and other social services to people in need across local communities.",
+    "description": "The Salvation Army provides food, shelter, disaster relief, and other social services to people in need.",
     "supportedCurrencies": ["USD"],
     "donateLink": "https://www.salvationarmyusa.org/ways-to-give/",
     "currency": "USD",
