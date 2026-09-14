@@ -169,12 +169,11 @@ See `.env.example`. Configured via environment variables (Node's built-in `--env
 
 ## Supported charities
 
-- **`salvation-army`** — The Salvation Army, via GoFundMe Charity.
+Currently, we only have built-in support for one charity (Salvation Army). You are meant to use the plugin system to write small plugins for the charities that you'd like to support. If you want a charity added to the built-ins list, please start an Issue and I'm happy to add it.
 
-More coming — each one needs a real receipt sample to build correctly (see
-[Adding a plugin](#adding-a-plugin)).
+## Plugins
 
-## Plugin architecture
+To add support for the charities that you want, you write small parser plugins. Each plugin is meant to handle parsing the email receipt format sent by that charity. It must parse the donation amount, donation time, etc.
 
 A plugin declares which DKIM domain(s) it trusts and how to read a receipt from a message
 signed by one of them. `parse()` only ever runs on a message that already passed DKIM
