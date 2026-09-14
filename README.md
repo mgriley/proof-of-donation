@@ -1,4 +1,4 @@
-# Proof of Donation
+# Proof of Donation 🔐
 
 Proof-of-donation is a self-hosted server for verifying charity donations via email receipts. It has a 
 simple API where you POST an email receipt (as an .eml file) and receive back the donation amount, donation time, authenticity, etc.
