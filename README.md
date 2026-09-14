@@ -58,7 +58,6 @@ npm run dev
 
 ### Docker
 
-
 ```bash
 docker run -p 8787:8787 ghcr.io/mgriley/proof-of-donation:latest
 ```
@@ -72,6 +71,16 @@ docker run -p 8787:8787 proof-of-donation
 
 `:latest` tracks `master` (no versioned releases yet).
 
+To add your own plugins, mount a directory into the container and point `PLUGIN_DIRS` at it
+(this adds to the bundled defaults; set `DISABLE_BUNDLED_PLUGINS=true` too if you want only
+your own):
+
+```bash
+docker run -p 8787:8787 \
+  -v /path/to/my-plugins:/plugins-extra \
+  -e PLUGIN_DIRS=/plugins-extra \
+  ghcr.io/mgriley/proof-of-donation:latest
+```
 
 ## API
 
