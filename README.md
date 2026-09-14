@@ -1,7 +1,7 @@
 # Proof of Donation
 
 Proof-of-donation is a self-hosted server for verifying charity donations via email receipts. It has a 
-simple API where you send an email receipt (as an .eml file) and receive back the donation amount, donation time, validity, etc.
+simple API where you send an email receipt (as an .eml file) and receive back the donation amount, donation time, authenticity, etc.
 
 The authenticity of the email is validated using the email's DKIM signatures, and custom plugins parse essential info out of the email. Importantly, this system doesn't require any integration work on the charity's end. As long as they send some kind of email receipt, it should be compatible.
 
