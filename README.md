@@ -163,10 +163,6 @@ curl http://localhost:8787/charities
 
 Liveness check: `{ "ok": true }`.
 
-## Configuration
-
-See `.env.example`. Configured via environment variables (Node's built-in `--env-file` works).
-
 ## Supported charities
 
 Currently, we only have built-in support for one charity (Salvation Army). You are meant to use the plugin system to write small plugins for the charities that you'd like to support. If you want a charity added to the built-ins list, please start an Issue and I'm happy to add it.
