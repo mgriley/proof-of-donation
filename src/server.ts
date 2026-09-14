@@ -16,13 +16,6 @@ export function createServer(plugins: ReceiptPlugin[]) {
     res.json({ ok: true });
   });
 
-  // Lets an integrating forum discover what this instance can verify before wiring up.
-  app.get('/plugins', (_req, res) => {
-    res.json({
-      plugins: plugins.map((p) => ({ id: p.id, name: p.name, trustedDkimDomains: p.trustedDkimDomains }))
-    });
-  });
-
   // For showing an end user "here's who you can donate to" before they've made a donation.
   app.get('/charities', (_req, res) => {
     res.json({ charities: plugins.map((p) => p.charityInfo) });

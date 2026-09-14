@@ -145,10 +145,6 @@ curl http://localhost:8787/charities
 }
 ```
 
-### `GET /plugins`
-
-What this instance can verify: `{ "plugins": [{ "id", "name", "trustedDkimDomains" }] }`.
-
 ### `GET /health`
 
 Liveness check: `{ "ok": true }`.
