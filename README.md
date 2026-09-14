@@ -1,16 +1,15 @@
 # Proof of Donation
 
-Is your website overrun by bots, grifters, rogue agents, and other assorted scum-of-the-earth?
+Proof-of-donation is a self-hosted server for verifying charity donations via email receipts. It has a 
+simple API where you send an email receipt (as an .eml file) and receive back the donation amount, donation time, validity, etc.
 
-Try replacing your CAPTCHAs with charity donations!
+The authenticity of the email is validated using the email's DKIM signatures, and custom plugins parse essential info out of the email. Importantly, this system doesn't require any integration work on the charity's end. As long as they send some kind of email receipt, it should be compatible.
 
-Proof-of-donation is a self-hosted alternative to CAPTCHA. Instead of having your new users solve
-a puzzle, have them donate to a supported charity and upload their email receipt. The proof-of-donation
-server uses email signatures (DKIM) to verify the authenticity of the receipt ("did the user actually
-donate X dollars somewhere?") and return a pass/no-pass.
+Possible use cases:
+- An experimental alternative to CAPTCHA for websites overrun with bots. Have your users upload a donation receipt instead of solve a traditional CAPTCHA puzzle.
+- Use as the entry condition for some kind of online contests, where the goal is to raise money for charity.
 
-Disclaimer: This project is new and not currently used anywhere in production. If you'd like to try it
-out in the wild, happy to help with setup :)
+Disclaimer: This project is new and not currently used anywhere in production.
 
 ## How it works
 
