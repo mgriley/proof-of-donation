@@ -56,7 +56,9 @@ npm install
 npm run dev
 ```
 
-### Docker
+## Deployment
+
+Use the docker container for deploying the server in your own infrastructure:
 
 ```bash
 docker run -p 8787:8787 ghcr.io/mgriley/proof-of-donation:latest
