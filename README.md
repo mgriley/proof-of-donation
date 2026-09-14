@@ -6,18 +6,18 @@ simple API where you send an email receipt (as an .eml file) and receive back th
 The authenticity of the email is validated using the email's DKIM signatures, and custom plugins parse essential info out of the email. Importantly, this system doesn't require any integration work on the charity's end. As long as they send some kind of email receipt, it should be compatible.
 
 Possible use cases:
-- An experimental alternative to CAPTCHA for websites overrun with bots. Have your users upload a donation receipt instead of solve a traditional CAPTCHA puzzle.
 - Use as the entry condition for some kind of online contests, where the goal is to raise money for charity.
+- Use as a penalty/time-out mechanism for users that abuse the rules in online forums. For example, if you get three strikes you must donate X amount and not post for Y hours to regain forum access.
+- An experimental alternative to CAPTCHA for websites overrun with bots. Have your users upload a donation receipt instead of solve a traditional CAPTCHA puzzle.
 
 Disclaimer: This project is new and not currently used anywhere in production.
 
 ## How it works
 
-1. You, a website owner, self-host a proof-of-donation server internally.
-2. You modify your sign-up page to have the user upload a donation receipt (`.eml` file), instead of
-solving a CAPTCHA.
-3. Send `POST /verify` to the server from your backend. It will verify the receipt and return pass/no-pass.
-4. If they pass, continue with account creation.
+1. You self-host a proof-of-donation server internally.
+2. You setup the server's `plugins/` directory with a plugin for each charity that you'd like to support.
+3. Any time you'd like to verify that a given user has donated X amount to a supported charity, you have them upload a donation receipt (`.eml` file) to your backend. Such as during competition entry, user sign-on, etc.
+5. Send `POST /verify` to the proof-of-donation server. It will verify the receipt and return pass/no-pass.
 
 How does it verify a receipt? Most modern email senders cryptographically sign emails sent by them (using a
 security standard called DKIM). We use this signature to verify that the email is in fact from the
@@ -269,10 +269,6 @@ website's server is responsible for:
   that reuses one you've already seen.
 
 ## Limitations
-
-Similar to CAPTCHA, proof-of-donation cannot reasonably stop a determined attacker. It can, however,
-increase the cost of creating hundreds or thousands of low-effort bot accounts. This can make a substantial
-difference for some websites and forums.
 
 - **No refund/chargeback tracking.** A receipt valid at donation time stays valid even if
   later refunded.
