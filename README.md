@@ -60,9 +60,14 @@ npm run dev
 
 Use the docker container for deploying the server in your own infrastructure:
 
+You can use the container from GHCR:
+
 ```bash
 docker run -p 8787:8787 ghcr.io/mgriley/proof-of-donation:latest
 ```
+
+(Note that `:latest` tracks `master`. No versioned releases yet).
+
 
 Or build from source:
 
@@ -70,8 +75,6 @@ Or build from source:
 docker build -t proof-of-donation .
 docker run -p 8787:8787 proof-of-donation
 ```
-
-`:latest` tracks `master` (no versioned releases yet).
 
 To add your own plugins, mount a directory into the container and point `PLUGIN_DIRS` at it
 (this adds to the bundled defaults; set `DISABLE_BUNDLED_PLUGINS=true` too if you want only
