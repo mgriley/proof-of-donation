@@ -66,8 +66,6 @@ You can use the container from GHCR:
 docker run -p 8787:8787 ghcr.io/mgriley/proof-of-donation:latest
 ```
 
-(Note that `:latest` tracks `master`. No versioned releases yet).
-
 
 Or build from source:
 
